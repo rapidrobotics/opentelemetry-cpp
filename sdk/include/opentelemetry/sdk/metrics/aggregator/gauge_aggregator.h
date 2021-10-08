@@ -1,13 +1,17 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
+#ifdef ENABLE_METRICS_PREVIEW
 
-#include "opentelemetry/core/timestamp.h"
-#include "opentelemetry/metrics/instrument.h"
-#include "opentelemetry/sdk/metrics/aggregator/aggregator.h"
-#include "opentelemetry/version.h"
+#  include "opentelemetry/common/timestamp.h"
+#  include "opentelemetry/metrics/instrument.h"
+#  include "opentelemetry/sdk/metrics/aggregator/aggregator.h"
+#  include "opentelemetry/version.h"
 
-#include <memory>
-#include <mutex>
-#include <vector>
+#  include <memory>
+#  include <mutex>
+#  include <vector>
 
 namespace metrics_api = opentelemetry::metrics;
 
@@ -36,7 +40,7 @@ public:
     this->values_      = std::vector<T>(1, 0);
     this->checkpoint_  = this->values_;
     this->agg_kind_    = AggregatorKind::Gauge;
-    current_timestamp_ = core::SystemTimestamp(std::chrono::system_clock::now());
+    current_timestamp_ = opentelemetry::common::SystemTimestamp(std::chrono::system_clock::now());
   }
 
   ~GaugeAggregator() = default;
@@ -61,7 +65,7 @@ public:
     this->mu_.lock();
     this->updated_     = true;
     this->values_[0]   = val;
-    current_timestamp_ = core::SystemTimestamp(std::chrono::system_clock::now());
+    current_timestamp_ = opentelemetry::common::SystemTimestamp(std::chrono::system_clock::now());
     this->mu_.unlock();
   }
 
@@ -82,7 +86,7 @@ public:
     // Reset the values to default
     this->values_[0]      = 0;
     checkpoint_timestamp_ = current_timestamp_;
-    current_timestamp_    = core::SystemTimestamp(std::chrono::system_clock::now());
+    current_timestamp_ = opentelemetry::common::SystemTimestamp(std::chrono::system_clock::now());
 
     this->mu_.unlock();
   }
@@ -101,7 +105,7 @@ public:
       this->values_[0] = other.values_[0];
       // Now merge checkpoints
       this->checkpoint_[0] = other.checkpoint_[0];
-      current_timestamp_   = core::SystemTimestamp(std::chrono::system_clock::now());
+      current_timestamp_ = opentelemetry::common::SystemTimestamp(std::chrono::system_clock::now());
       this->mu_.unlock();
     }
     else
@@ -119,7 +123,10 @@ public:
   /**
    * @return the latest checkpointed timestamp
    */
-  core::SystemTimestamp get_checkpoint_timestamp() override { return checkpoint_timestamp_; }
+  opentelemetry::common::SystemTimestamp get_checkpoint_timestamp() override
+  {
+    return checkpoint_timestamp_;
+  }
 
   /**
    * @return the values_ vector stored in this aggregator
@@ -129,12 +136,13 @@ public:
   /**
    * @return the timestamp of when the last value recorded
    */
-  core::SystemTimestamp get_timestamp() { return current_timestamp_; }
+  opentelemetry::common::SystemTimestamp get_timestamp() { return current_timestamp_; }
 
 private:
-  core::SystemTimestamp current_timestamp_;
-  core::SystemTimestamp checkpoint_timestamp_;
+  opentelemetry::common::SystemTimestamp current_timestamp_;
+  opentelemetry::common::SystemTimestamp checkpoint_timestamp_;
 };
 }  // namespace metrics
 }  // namespace sdk
 OPENTELEMETRY_END_NAMESPACE
+#endif

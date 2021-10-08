@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include "opentelemetry/nostd/shared_ptr.h"
@@ -21,7 +24,8 @@ public:
    * instance.
    */
   virtual nostd::shared_ptr<Tracer> GetTracer(nostd::string_view library_name,
-                                              nostd::string_view library_version = "") = 0;
+                                              nostd::string_view library_version = "",
+                                              nostd::string_view schema_url      = "") = 0;
 };
 }  // namespace trace
 OPENTELEMETRY_END_NAMESPACE

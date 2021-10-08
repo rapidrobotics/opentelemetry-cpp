@@ -1,8 +1,13 @@
-#include <gtest/gtest.h>
-#include <cstring>
-#include <map>
-#include <string>
-#include "opentelemetry/metrics/noop.h"
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+#ifdef ENABLE_METRICS_PREVIEW
+#  include <gtest/gtest.h>
+#  include <cstring>
+#  include <map>
+#  include <string>
+
+#  include "opentelemetry/metrics/noop.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace metrics
@@ -11,7 +16,7 @@ namespace metrics
 void noopIntCallback(ObserverResult<int> result)
 {
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
   result.observe(1, labelkv);
   result.observe(-1, labelkv);
 }
@@ -19,7 +24,7 @@ void noopIntCallback(ObserverResult<int> result)
 void noopDoubleCallback(ObserverResult<double> result)
 {
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
   result.observe(1.5, labelkv);
   result.observe(-1.5, labelkv);
 }
@@ -31,7 +36,7 @@ TEST(ValueObserver, Observe)
   NoopValueObserver<double> beta("test", "none", "unitless", true, &noopDoubleCallback);
 
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   alpha.observe(1, labelkv);
   beta.observe(1.5, labelkv);
@@ -44,7 +49,7 @@ TEST(SumObserver, DefaultConstruction)
   NoopSumObserver<double> beta("test", "none", "unitless", true, &noopDoubleCallback);
 
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   alpha.observe(1, labelkv);
   beta.observe(1.5, labelkv);
@@ -57,7 +62,7 @@ TEST(UpDownSumObserver, DefaultConstruction)
   NoopUpDownSumObserver<double> beta("test", "none", "unitless", true, &noopDoubleCallback);
 
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   alpha.observe(1, labelkv);
   beta.observe(1.0, labelkv);
@@ -71,7 +76,7 @@ TEST(Counter, DefaultConstruction)
   NoopCounter<double> beta("other", "none", "unitless", true);
 
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   alpha.bind(labelkv);
 
@@ -88,7 +93,7 @@ TEST(Counter, Add)
   NoopCounter<double> beta("other", "none", "unitless", true);
 
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   alpha.add(1, labelkv);
   beta.add(1.5, labelkv);
@@ -109,7 +114,7 @@ TEST(UpDownCounter, DefaultConstruction)
   NoopUpDownCounter<double> beta("other", "none", "unitless", true);
 
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   alpha.bind(labelkv);
 
@@ -126,7 +131,7 @@ TEST(UpDownCounter, Add)
   NoopUpDownCounter<double> beta("other", "none", "unitless", true);
 
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   alpha.add(1, labelkv);
   beta.add(1.5, labelkv);
@@ -149,7 +154,7 @@ TEST(ValueRecorder, DefaultConstruction)
   NoopValueRecorder<double> beta("other", "none", "unitless", true);
 
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   alpha.bind(labelkv);
 
@@ -166,7 +171,7 @@ TEST(ValueRecorder, Record)
   NoopValueRecorder<double> beta("other", "none", "unitless", true);
 
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   alpha.record(1, labelkv);
   beta.record(1.5, labelkv);
@@ -183,3 +188,4 @@ TEST(ValueRecorder, Record)
 
 }  // namespace metrics
 OPENTELEMETRY_END_NAMESPACE
+#endif

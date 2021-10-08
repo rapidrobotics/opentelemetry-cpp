@@ -1,6 +1,11 @@
-#include "opentelemetry/sdk/metrics/meter.h"
-#include <gtest/gtest.h>
-#include <future>
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+#ifdef ENABLE_METRICS_PREVIEW
+#  include <gtest/gtest.h>
+#  include <future>
+
+#  include "opentelemetry/sdk/metrics/meter.h"
 
 using namespace opentelemetry::sdk::metrics;
 namespace metrics_api = opentelemetry::metrics;
@@ -69,7 +74,7 @@ TEST(Meter, CollectSyncInstruments)
   auto counter = m.NewShortCounter("Test-counter", "For testing", "Unitless", true);
 
   std::map<std::string, std::string> labels = {{"Key", "Value"}};
-  auto labelkv = opentelemetry::trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
 
   counter->add(1, labelkv);
 
@@ -101,7 +106,7 @@ TEST(Meter, CollectDeletedSync)
   ASSERT_EQ(m.Collect().size(), 0);
 
   std::map<std::string, std::string> labels = {{"Key", "Value"}};
-  auto labelkv = opentelemetry::trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
   {
     auto counter = m.NewShortCounter("Test-counter", "For testing", "Unitless", true);
     counter->add(1, labelkv);
@@ -118,7 +123,7 @@ TEST(Meter, CollectDeletedSync)
 void Callback(opentelemetry::metrics::ObserverResult<short> result)
 {
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
   result.observe(1, labelkv);
 }
 
@@ -134,7 +139,7 @@ TEST(Meter, CollectAsyncInstruments)
       m.NewShortSumObserver("Test-counter", "For testing", "Unitless", true, &ShortCallback);
 
   std::map<std::string, std::string> labels = {{"Key", "Value"}};
-  auto labelkv = opentelemetry::trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
 
   sumobs->observe(1, labelkv);
 
@@ -166,7 +171,7 @@ TEST(Meter, CollectDeletedAsync)
   ASSERT_EQ(m.Collect().size(), 0);
 
   std::map<std::string, std::string> labels = {{"Key", "Value"}};
-  auto labelkv = opentelemetry::trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
   {
     auto sumobs = m.NewShortSumObserver("Test-counter", "For testing", "Unitless", true, &Callback);
     sumobs->observe(1, labelkv);
@@ -191,7 +196,7 @@ TEST(Meter, RecordBatch)
   auto dcounter = m.NewDoubleCounter("Test-dcounter", "For testing", "Unitless", true);
 
   std::map<std::string, std::string> labels = {{"Key", "Value"}};
-  auto labelkv = opentelemetry::trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
 
   metrics_api::SynchronousInstrument<short> *sinstr_arr[] = {scounter.get()};
   short svalues_arr[]                                     = {1};
@@ -246,7 +251,7 @@ TEST(Meter, DisableCollectSync)
 {
   Meter m("Test");
   std::map<std::string, std::string> labels = {{"Key", "Value"}};
-  auto labelkv = opentelemetry::trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
   auto c       = m.NewShortCounter("c", "", "", false);
   c->add(1, labelkv);
   ASSERT_EQ(m.Collect().size(), 0);
@@ -256,7 +261,7 @@ TEST(Meter, DisableCollectAsync)
 {
   Meter m("Test");
   std::map<std::string, std::string> labels = {{"Key", "Value"}};
-  auto labelkv = opentelemetry::trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = opentelemetry::common::KeyValueIterableView<decltype(labels)>{labels};
   auto c       = m.NewShortValueObserver("c", "", "", false, &ShortCallback);
   c->observe(1, labelkv);
   ASSERT_EQ(m.Collect().size(), 0);
@@ -264,7 +269,7 @@ TEST(Meter, DisableCollectAsync)
 
 TEST(MeterStringUtil, IsValid)
 {
-#if __EXCEPTIONS
+#  if __EXCEPTIONS
   Meter m("Test");
   ASSERT_ANY_THROW(m.NewShortCounter("", "Empty name is invalid", " ", true));
   ASSERT_ANY_THROW(m.NewShortCounter("1a", "Can't begin with a number", " ", true));
@@ -272,18 +277,19 @@ TEST(MeterStringUtil, IsValid)
   ASSERT_ANY_THROW(m.NewShortCounter(" a", "Can't begin with space", " ", true));
   ASSERT_ANY_THROW(m.NewShortCounter(
       "te^ s=%t", "Only alphanumeric ., -, and _ characters are allowed", " ", true));
-#endif
+#  endif
 }
 
 TEST(MeterStringUtil, AlreadyExists)
 {
-#if __EXCEPTIONS
+#  if __EXCEPTIONS
   Meter m("Test");
 
   m.NewShortCounter("a", "First instance of instrument named 'a'", "", true);
   ASSERT_ANY_THROW(m.NewShortCounter("a", "Second (illegal) instrument named 'a'", "", true));
   ASSERT_ANY_THROW(m.NewShortSumObserver("a", "Still illegal even though it is not a short counter",
                                          "", true, &ShortCallback));
-#endif
+#  endif
 }
 OPENTELEMETRY_END_NAMESPACE
+#endif

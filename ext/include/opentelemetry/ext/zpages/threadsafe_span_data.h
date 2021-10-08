@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include <chrono>
@@ -5,7 +8,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "opentelemetry/core/timestamp.h"
+#include "opentelemetry/common/timestamp.h"
 #include "opentelemetry/nostd/string_view.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "opentelemetry/sdk/trace/span_data.h"
@@ -13,11 +16,6 @@
 #include "opentelemetry/trace/span.h"
 #include "opentelemetry/trace/span_id.h"
 #include "opentelemetry/trace/trace_id.h"
-
-using opentelemetry::sdk::trace::AttributeConverter;
-using opentelemetry::sdk::trace::SpanDataAttributeValue;
-using opentelemetry::sdk::trace::SpanDataEvent;
-namespace trace_api = opentelemetry::trace;
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace ext
@@ -38,7 +36,7 @@ public:
   opentelemetry::trace::TraceId GetTraceId() const noexcept
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    return trace_id_;
+    return span_context_.trace_id();
   }
 
   /**
@@ -48,7 +46,17 @@ public:
   opentelemetry::trace::SpanId GetSpanId() const noexcept
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    return span_id_;
+    return span_context_.span_id();
+  }
+
+  /**
+   * Get the span context for this span
+   * @return the span context for this span
+   */
+  const opentelemetry::trace::SpanContext &GetSpanContext() const noexcept
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return span_context_;
   }
 
   /**
@@ -75,7 +83,7 @@ public:
    * Get the status for this span
    * @return the status for this span
    */
-  opentelemetry::trace::CanonicalCode GetStatus() const noexcept
+  opentelemetry::trace::StatusCode GetStatus() const noexcept
   {
     std::lock_guard<std::mutex> lock(mutex_);
     return status_code_;
@@ -95,7 +103,7 @@ public:
    * Get the start time for this span
    * @return the start time for this span
    */
-  opentelemetry::core::SystemTimestamp GetStartTime() const noexcept
+  opentelemetry::common::SystemTimestamp GetStartTime() const noexcept
   {
     std::lock_guard<std::mutex> lock(mutex_);
     return start_time_;
@@ -115,19 +123,18 @@ public:
    * Get the attributes for this span
    * @return the attributes for this span
    */
-  const std::unordered_map<std::string, SpanDataAttributeValue> GetAttributes() const noexcept
+  std::unordered_map<std::string, opentelemetry::sdk::common::OwnedAttributeValue> GetAttributes()
+      const noexcept
   {
     std::lock_guard<std::mutex> lock(mutex_);
     return attributes_;
   }
 
-  void SetIds(opentelemetry::trace::TraceId trace_id,
-              opentelemetry::trace::SpanId span_id,
-              opentelemetry::trace::SpanId parent_span_id) noexcept override
+  void SetIdentity(const opentelemetry::trace::SpanContext &span_context,
+                   opentelemetry::trace::SpanId parent_span_id) noexcept override
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    trace_id_       = trace_id;
-    span_id_        = span_id;
+    span_context_   = span_context;
     parent_span_id_ = parent_span_id;
   }
 
@@ -137,7 +144,8 @@ public:
     attributes_[std::string(key)] = nostd::visit(converter_, value);
   }
 
-  void SetStatus(trace_api::CanonicalCode code, nostd::string_view description) noexcept override
+  void SetStatus(opentelemetry::trace::StatusCode code,
+                 nostd::string_view description) noexcept override
   {
     std::lock_guard<std::mutex> lock(mutex_);
     status_code_ = code;
@@ -150,7 +158,17 @@ public:
     name_ = std::string(name);
   }
 
-  void SetStartTime(opentelemetry::core::SystemTimestamp start_time) noexcept override
+  void SetSpanKind(opentelemetry::trace::SpanKind span_kind) noexcept override
+  {
+    span_kind_ = span_kind;
+  }
+
+  void SetResource(const opentelemetry::sdk::resource::Resource & /*resource*/) noexcept override
+  {
+    // Not Implemented
+  }
+
+  void SetStartTime(opentelemetry::common::SystemTimestamp start_time) noexcept override
   {
     std::lock_guard<std::mutex> lock(mutex_);
     start_time_ = start_time;
@@ -162,10 +180,18 @@ public:
     duration_ = duration;
   }
 
-  void AddLink(
-      opentelemetry::trace::SpanContext span_context,
-      const trace_api::KeyValueIterable &attributes =
-          trace_api::KeyValueIterableView<std::map<std::string, int>>({})) noexcept override
+  void SetInstrumentationLibrary(
+      const opentelemetry::sdk::instrumentationlibrary::InstrumentationLibrary
+          &instrumentation_library) noexcept override
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    instrumentation_library_ = &instrumentation_library;
+  }
+
+  void AddLink(const opentelemetry::trace::SpanContext &span_context,
+               const opentelemetry::common::KeyValueIterable &attributes =
+                   opentelemetry::common::KeyValueIterableView<std::map<std::string, int>>(
+                       {})) noexcept override
   {
     std::lock_guard<std::mutex> lock(mutex_);
     (void)span_context;
@@ -174,12 +200,14 @@ public:
 
   void AddEvent(
       nostd::string_view name,
-      core::SystemTimestamp timestamp = core::SystemTimestamp(std::chrono::system_clock::now()),
-      const trace_api::KeyValueIterable &attributes =
-          trace_api::KeyValueIterableView<std::map<std::string, int>>({})) noexcept override
+      common::SystemTimestamp timestamp = common::SystemTimestamp(std::chrono::system_clock::now()),
+      const opentelemetry::common::KeyValueIterable &attributes =
+          opentelemetry::common::KeyValueIterableView<std::map<std::string, int>>(
+              {})) noexcept override
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    events_.push_back(SpanDataEvent(std::string(name), timestamp, attributes));
+    events_.push_back(
+        opentelemetry::sdk::trace::SpanDataEvent(std::string(name), timestamp, attributes));
   }
 
   ThreadsafeSpanData() {}
@@ -191,8 +219,7 @@ public:
 private:
   ThreadsafeSpanData(const ThreadsafeSpanData &threadsafe_span_data,
                      const std::lock_guard<std::mutex> &)
-      : trace_id_(threadsafe_span_data.trace_id_),
-        span_id_(threadsafe_span_data.span_id_),
+      : span_context_(threadsafe_span_data.span_context_),
         parent_span_id_(threadsafe_span_data.parent_span_id_),
         start_time_(threadsafe_span_data.start_time_),
         duration_(threadsafe_span_data.duration_),
@@ -201,21 +228,24 @@ private:
         status_desc_(threadsafe_span_data.status_desc_),
         attributes_(threadsafe_span_data.attributes_),
         events_(threadsafe_span_data.events_),
-        converter_(threadsafe_span_data.converter_)
+        converter_(threadsafe_span_data.converter_),
+        instrumentation_library_(threadsafe_span_data.instrumentation_library_)
   {}
 
   mutable std::mutex mutex_;
-  opentelemetry::trace::TraceId trace_id_;
-  opentelemetry::trace::SpanId span_id_;
+  opentelemetry::trace::SpanContext span_context_{false, false};
   opentelemetry::trace::SpanId parent_span_id_;
-  core::SystemTimestamp start_time_;
+  common::SystemTimestamp start_time_;
   std::chrono::nanoseconds duration_{0};
   std::string name_;
-  opentelemetry::trace::CanonicalCode status_code_{opentelemetry::trace::CanonicalCode::OK};
+  opentelemetry::trace::SpanKind span_kind_;
+  opentelemetry::trace::StatusCode status_code_{opentelemetry::trace::StatusCode::kUnset};
   std::string status_desc_;
-  std::unordered_map<std::string, SpanDataAttributeValue> attributes_;
-  std::vector<SpanDataEvent> events_;
-  AttributeConverter converter_;
+  std::unordered_map<std::string, opentelemetry::sdk::common::OwnedAttributeValue> attributes_;
+  std::vector<opentelemetry::sdk::trace::SpanDataEvent> events_;
+  opentelemetry::sdk::common::AttributeConverter converter_;
+  const opentelemetry::sdk::instrumentationlibrary::InstrumentationLibrary
+      *instrumentation_library_;
 };
 }  // namespace zpages
 }  // namespace ext

@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include <atomic>
@@ -20,6 +23,8 @@ class AtomicUniquePtr
 public:
   AtomicUniquePtr() noexcept {}
 
+  explicit AtomicUniquePtr(std::unique_ptr<T> &&other) noexcept : ptr_(other.release()) {}
+
   ~AtomicUniquePtr() noexcept { Reset(); }
 
   T &operator*() const noexcept { return *Get(); }
@@ -34,7 +39,7 @@ public:
   /**
    * @return true if the pointer is null
    */
-  bool IsNull() const noexcept { return ptr_ == nullptr; }
+  bool IsNull() const noexcept { return ptr_.load() == nullptr; }
 
   /**
    * Atomically swap the pointer only if it's null.

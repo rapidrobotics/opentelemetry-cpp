@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include <algorithm>
@@ -80,7 +83,7 @@ protected:
   }
 
   /**
-   * Helper that replaces all occurances a string within a string
+   * Helper that replaces all occurrences a string within a string
    * @param str string to modify
    * @param search substring to remove from str
    * @param replacement string to replace search with whenever search is found

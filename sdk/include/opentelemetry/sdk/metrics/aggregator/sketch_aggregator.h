@@ -1,15 +1,19 @@
-#pragma once
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include <algorithm>
-#include <cmath>
-#include <limits>
-#include <map>
-#include <mutex>
-#include <stdexcept>
-#include <vector>
-#include "opentelemetry/metrics/instrument.h"
-#include "opentelemetry/sdk/metrics/aggregator/aggregator.h"
-#include "opentelemetry/version.h"
+#pragma once
+#ifdef ENABLE_METRICS_PREVIEW
+
+#  include <algorithm>
+#  include <cmath>
+#  include <limits>
+#  include <map>
+#  include <mutex>
+#  include <stdexcept>
+#  include <vector>
+#  include "opentelemetry/metrics/instrument.h"
+#  include "opentelemetry/sdk/metrics/aggregator/aggregator.h"
+#  include "opentelemetry/version.h"
 
 namespace metrics_api = opentelemetry::metrics;
 
@@ -68,11 +72,11 @@ public:
     int idx;
     if (val == 0)
     {
-      idx = std::numeric_limits<int>::min();
+      idx = (std::numeric_limits<int>::min());
     }
     else
     {
-      idx = ceil(log(val) / log(gamma));
+      idx = static_cast<int>(ceil(log(val) / log(gamma)));
     }
     if (raw_.find(idx) != raw_.end())
     {
@@ -96,17 +100,17 @@ public:
   /**
    * Calculate and return the value of a user specified quantile.
    *
-   * @param q, the quantile to calculate (for example 0.5 is equivelant to the 50th percentile)
+   * @param q, the quantile to calculate (for example 0.5 is equivalent to the 50th percentile)
    */
   virtual T get_quantiles(double q) override
   {
     if (q < 0 || q > 1)
     {
-#if __EXCEPTIONS
+#  if __EXCEPTIONS
       throw std::invalid_argument("Quantile values must fall between 0 and 1");
-#else
+#  else
       std::terminate();
-#endif
+#  endif
     }
     auto iter = checkpoint_raw_.begin();
     int idx   = iter->first;
@@ -118,7 +122,7 @@ public:
       idx = iter->first;
       count += iter->second;
     }
-    return round(2 * pow(gamma, idx) / (gamma + 1));
+    return static_cast<T>(round(2 * pow(gamma, idx) / (gamma + 1)));
   }
 
   /**
@@ -152,19 +156,19 @@ public:
   {
     if (gamma != other.gamma)
     {
-#if __EXCEPTIONS
+#  if __EXCEPTIONS
       throw std::invalid_argument("Aggregators must have identical error tolerance");
-#else
+#  else
       std::terminate();
-#endif
+#  endif
     }
     else if (max_buckets_ != other.max_buckets_)
     {
-#if __EXCEPTIONS
+#  if __EXCEPTIONS
       throw std::invalid_argument("Aggregators must have the same maximum bucket allowance");
-#else
+#  else
       std::terminate();
-#endif
+#  endif
     }
 
     this->mu_.lock();
@@ -275,3 +279,4 @@ private:
 }  // namespace metrics
 }  // namespace sdk
 OPENTELEMETRY_END_NAMESPACE
+#endif

@@ -1,14 +1,24 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
-#include <array>
-#include <cassert>
-#include <cstddef>
-#include <exception>
-#include <iterator>
-#include <type_traits>
+// Try to use either `std::span` or `gsl::span`
+#ifdef HAVE_CPP_STDLIB
+#  include "opentelemetry/std/span.h"
+#endif
 
-#include "opentelemetry/nostd/utility.h"
-#include "opentelemetry/version.h"
+// Fallback to `nostd::span` if necessary
+#if !defined(HAVE_SPAN)
+#  include <array>
+#  include <cassert>
+#  include <cstddef>
+#  include <exception>
+#  include <iterator>
+#  include <type_traits>
+
+#  include "opentelemetry/nostd/utility.h"
+#  include "opentelemetry/version.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace nostd
@@ -238,3 +248,4 @@ private:
 };
 }  // namespace nostd
 OPENTELEMETRY_END_NAMESPACE
+#endif

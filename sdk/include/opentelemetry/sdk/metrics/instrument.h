@@ -1,25 +1,33 @@
-#pragma once
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include <iostream>
-#include <map>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <unordered_map>
-#include <vector>
-#include "opentelemetry/metrics/instrument.h"
-#include "opentelemetry/sdk/metrics/aggregator/aggregator.h"
-#include "opentelemetry/sdk/metrics/record.h"
-#include "opentelemetry/version.h"
+#pragma once
+#ifdef ENABLE_METRICS_PREVIEW
+
+#  include <iostream>
+#  include <map>
+#  include <memory>
+#  include <sstream>
+#  include <string>
+#  include <unordered_map>
+#  include <vector>
+#  include "opentelemetry/metrics/instrument.h"
+#  include "opentelemetry/sdk/metrics/aggregator/aggregator.h"
+#  include "opentelemetry/sdk/metrics/record.h"
+#  include "opentelemetry/version.h"
 
 namespace metrics_api = opentelemetry::metrics;
-namespace trace_api   = opentelemetry::trace;
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace sdk
 {
 namespace metrics
 {
+
+#  if defined(_MSC_VER)
+#    pragma warning(push)
+#    pragma warning(disable : 4250)  // inheriting methods via dominance
+#  endif
 
 class Instrument : virtual public metrics_api::Instrument
 {
@@ -174,13 +182,13 @@ public:
    * @return a Bound Instrument
    */
   virtual nostd::shared_ptr<metrics_api::BoundSynchronousInstrument<T>> bind(
-      const trace::KeyValueIterable &labels) override
+      const opentelemetry::common::KeyValueIterable &labels) override
   {
     return nostd::shared_ptr<BoundSynchronousInstrument<T>>();
   }
 
   // This function is necessary for batch recording and should NOT be called by the user
-  virtual void update(T value, const trace::KeyValueIterable &labels) override = 0;
+  virtual void update(T value, const opentelemetry::common::KeyValueIterable &labels) override = 0;
 
   /**
    * Checkpoints instruments and returns a set of records which are ready for processing.
@@ -221,7 +229,7 @@ public:
    * @param labels is the numerical representation of the metric being captured
    * @return none
    */
-  virtual void observe(T value, const trace::KeyValueIterable &labels) override = 0;
+  virtual void observe(T value, const opentelemetry::common::KeyValueIterable &labels) override = 0;
 
   virtual std::vector<Record> GetRecords() = 0;
 
@@ -236,24 +244,24 @@ public:
   virtual void run() override = 0;
 };
 
-// Helper functions for turning a trace::KeyValueIterable into a string
+// Helper functions for turning a common::KeyValueIterable into a string
 inline void print_value(std::stringstream &ss,
-                        common::AttributeValue &value,
+                        opentelemetry::common::AttributeValue &value,
                         bool jsonTypes = false)
 {
   switch (value.index())
   {
-    case common::AttributeType::TYPE_STRING:
+    case opentelemetry::common::AttributeType::kTypeString:
 
       ss << nostd::get<nostd::string_view>(value);
 
       break;
     default:
-#if __EXCEPTIONS
+#  if __EXCEPTIONS
       throw std::invalid_argument("Labels must be strings");
-#else
+#  else
       std::terminate();
-#endif
+#  endif
       break;
   }
 };
@@ -271,7 +279,7 @@ inline std::string mapToString(const std::map<std::string, std::string> &conv)
   return ss.str();
 }
 
-inline std::string KvToString(const trace::KeyValueIterable &kv) noexcept
+inline std::string KvToString(const opentelemetry::common::KeyValueIterable &kv) noexcept
 {
   std::stringstream ss;
   ss << "{";
@@ -279,21 +287,27 @@ inline std::string KvToString(const trace::KeyValueIterable &kv) noexcept
   if (size)
   {
     size_t i = 1;
-    kv.ForEachKeyValue([&](nostd::string_view key, common::AttributeValue value) noexcept {
-      ss << key << ":";
-      print_value(ss, value, true);
-      if (size != i)
-      {
-        ss << ",";
-      }
-      i++;
-      return true;
-    });
+    kv.ForEachKeyValue(
+        [&](nostd::string_view key, opentelemetry::common::AttributeValue value) noexcept {
+          ss << key << ":";
+          print_value(ss, value, true);
+          if (size != i)
+          {
+            ss << ",";
+          }
+          i++;
+          return true;
+        });
   };
   ss << "}";
   return ss.str();
 }
 
+#  if defined(_MSC_VER)
+#    pragma warning(pop)
+#  endif
+
 }  // namespace metrics
 }  // namespace sdk
 OPENTELEMETRY_END_NAMESPACE
+#endif

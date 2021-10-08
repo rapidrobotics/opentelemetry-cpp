@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 #include "opentelemetry/common/attribute_value.h"
 #include "opentelemetry/trace/canonical_code.h"
@@ -7,6 +10,12 @@
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace trace
 {
+
+/**
+ * DefaultSpan provides a non-operational Span that propagates
+ * the tracer context by wrapping it inside the Span object.
+ */
+
 class DefaultSpan : public Span
 {
 public:
@@ -17,33 +26,31 @@ public:
 
   bool IsRecording() const noexcept { return false; }
 
-  void SetAttribute(nostd::string_view key, const common::AttributeValue &value) noexcept {}
-
-  void AddEvent(nostd::string_view name) noexcept {}
-
-  void AddEvent(nostd::string_view name, core::SystemTimestamp timestamp) noexcept {}
-
-  void AddEvent(nostd::string_view name,
-                core::SystemTimestamp timestamp,
-                const KeyValueIterable &attributes) noexcept
+  void SetAttribute(nostd::string_view /* key */,
+                    const common::AttributeValue & /* value */) noexcept
   {}
 
-  void AddEvent(nostd::string_view name, const KeyValueIterable &attributes) noexcept
+  void AddEvent(nostd::string_view /* name */) noexcept {}
+
+  void AddEvent(nostd::string_view /* name */, common::SystemTimestamp /* timestamp */) noexcept {}
+
+  void AddEvent(nostd::string_view /* name */,
+                common::SystemTimestamp /* timestamp */,
+                const common::KeyValueIterable & /* attributes */) noexcept
+  {}
+
+  void AddEvent(nostd::string_view name, const common::KeyValueIterable &attributes) noexcept
   {
     this->AddEvent(name, std::chrono::system_clock::now(), attributes);
   }
 
-  void SetStatus(CanonicalCode status, nostd::string_view description) noexcept {}
+  void SetStatus(StatusCode /* status */, nostd::string_view /* description */) noexcept {}
 
-  void UpdateName(nostd::string_view name) noexcept {}
+  void UpdateName(nostd::string_view /* name */) noexcept {}
 
-  void End(const EndSpanOptions &options = {}) noexcept {}
+  void End(const EndSpanOptions & /* options */ = {}) noexcept {}
 
   nostd::string_view ToString() { return "DefaultSpan"; }
-
-  void SetToken(nostd::unique_ptr<context::Token> &&default_token) noexcept {}
-
-  DefaultSpan() = default;
 
   DefaultSpan(SpanContext span_context) : span_context_(span_context) {}
 

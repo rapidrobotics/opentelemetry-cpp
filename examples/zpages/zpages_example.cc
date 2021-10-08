@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 /**
  * This is a basic example for zpages that helps users get familiar with how to
  * use this feature in OpenTelemetery
@@ -5,11 +8,10 @@
 #include <chrono>
 #include <iostream>
 #include <string>
-#include "opentelemetry/context/threadlocal_context.h"
 
 #include "opentelemetry/ext/zpages/zpages.h"  // Required file include for zpages
 
-using opentelemetry::core::SteadyTimestamp;
+using opentelemetry::common::SteadyTimestamp;
 
 int main(int argc, char *argv[])
 {
@@ -31,7 +33,7 @@ int main(int argc, char *argv[])
   std::map<std::string, opentelemetry::common::AttributeValue> attribute_map;
   attribute_map["completed_search_for"] = "Unknown user";
   tracer->StartSpan("find user", attribute_map)
-      ->SetStatus(opentelemetry::trace::CanonicalCode::NOT_FOUND, "User not found");
+      ->SetStatus(opentelemetry::trace::StatusCode::kError, "User not found");
 
   // Long time duration span
   std::map<std::string, opentelemetry::common::AttributeValue> attribute_map2;

@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include "opentelemetry/sdk/trace/sampler.h"
@@ -10,22 +13,31 @@ namespace trace
 namespace trace_api = opentelemetry::trace;
 
 /**
- * The always off sampler always returns NOT_RECORD, effectively disabling
+ * The always off sampler always returns DROP, effectively disabling
  * tracing functionality.
  */
 class AlwaysOffSampler : public Sampler
 {
 public:
   /**
-   * @return Returns NOT_RECORD always
+   * @return Returns DROP always
    */
-  SamplingResult ShouldSample(const trace_api::SpanContext * /*parent_context*/,
-                              trace_api::TraceId /*trace_id*/,
-                              nostd::string_view /*name*/,
-                              trace_api::SpanKind /*span_kind*/,
-                              const trace_api::KeyValueIterable & /*attributes*/) noexcept override
+  SamplingResult ShouldSample(
+      const trace_api::SpanContext &parent_context,
+      trace_api::TraceId /*trace_id*/,
+      nostd::string_view /*name*/,
+      trace_api::SpanKind /*span_kind*/,
+      const opentelemetry::common::KeyValueIterable & /*attributes*/,
+      const trace_api::SpanContextKeyValueIterable & /*links*/) noexcept override
   {
-    return {Decision::NOT_RECORD, nullptr};
+    if (!parent_context.IsValid())
+    {
+      return {Decision::DROP, nullptr, opentelemetry::trace::TraceState::GetDefault()};
+    }
+    else
+    {
+      return {Decision::DROP, nullptr, parent_context.trace_state()};
+    }
   }
 
   /**

@@ -1,12 +1,19 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
-#include <cstddef>
-#include <initializer_list>
-#include <type_traits>
+#ifdef HAVE_CPP_STDLIB
+#  include "opentelemetry/std/utility.h"
+#else
 
-#include "opentelemetry/nostd/detail/decay.h"
-#include "opentelemetry/nostd/detail/invoke.h"
-#include "opentelemetry/version.h"
+#  include <cstddef>
+#  include <initializer_list>
+#  include <type_traits>
+
+#  include "opentelemetry/nostd/detail/decay.h"
+#  include "opentelemetry/nostd/detail/invoke.h"
+#  include "opentelemetry/version.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace nostd
@@ -146,3 +153,4 @@ struct in_place_type_t
 };
 }  // namespace nostd
 OPENTELEMETRY_END_NAMESPACE
+#endif

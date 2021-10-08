@@ -1,11 +1,16 @@
-#pragma once
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include <iostream>
-#include "opentelemetry/sdk/metrics/aggregator/exact_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/gauge_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/histogram_aggregator.h"
-#include "opentelemetry/sdk/metrics/exporter.h"
-#include "opentelemetry/sdk/metrics/record.h"
+#pragma once
+#ifdef ENABLE_METRICS_PREVIEW
+
+#  include <iostream>
+#  include <string>
+#  include "opentelemetry/sdk/metrics/aggregator/exact_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/gauge_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/histogram_aggregator.h"
+#  include "opentelemetry/sdk/metrics/exporter.h"
+#  include "opentelemetry/sdk/metrics/record.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace sdkmetrics = opentelemetry::sdk::metrics;
@@ -28,7 +33,8 @@ public:
    */
   explicit OStreamMetricsExporter(std::ostream &sout = std::cout) noexcept;
 
-  sdkmetrics::ExportResult Export(const std::vector<sdkmetrics::Record> &records) noexcept override;
+  sdk::common::ExportResult Export(
+      const std::vector<sdkmetrics::Record> &records) noexcept override;
 
 private:
   std::ostream &sout_;
@@ -48,28 +54,24 @@ private:
       return;
     switch (aggKind)
     {
-      case sdkmetrics::AggregatorKind::Counter:
-      {
+      case sdkmetrics::AggregatorKind::Counter: {
         sout_ << "\n  sum         : " << agg->get_checkpoint()[0];
       }
       break;
-      case sdkmetrics::AggregatorKind::MinMaxSumCount:
-      {
+      case sdkmetrics::AggregatorKind::MinMaxSumCount: {
         auto mmsc = agg->get_checkpoint();
         sout_ << "\n  min         : " << mmsc[0] << "\n  max         : " << mmsc[1]
               << "\n  sum         : " << mmsc[2] << "\n  count       : " << mmsc[3];
       }
       break;
-      case sdkmetrics::AggregatorKind::Gauge:
-      {
+      case sdkmetrics::AggregatorKind::Gauge: {
         auto timestamp = agg->get_checkpoint_timestamp();
 
         sout_ << "\n  last value  : " << agg->get_checkpoint()[0]
               << "\n  timestamp   : " << std::to_string(timestamp.time_since_epoch().count());
       }
       break;
-      case sdkmetrics::AggregatorKind::Exact:
-      {
+      case sdkmetrics::AggregatorKind::Exact: {
         // TODO: Find better way to print quantiles
         if (agg->get_quant_estimation())
         {
@@ -82,9 +84,9 @@ private:
         }
         else
         {
-          auto vec = agg->get_checkpoint();
-          int size = vec.size();
-          int i    = 1;
+          auto vec    = agg->get_checkpoint();
+          size_t size = vec.size();
+          size_t i    = 1;
 
           sout_ << "\n  values      : " << '[';
 
@@ -99,17 +101,16 @@ private:
         }
       }
       break;
-      case sdkmetrics::AggregatorKind::Histogram:
-      {
+      case sdkmetrics::AggregatorKind::Histogram: {
         auto boundaries = agg->get_boundaries();
         auto counts     = agg->get_counts();
 
-        int boundaries_size = boundaries.size();
-        int counts_size     = counts.size();
+        size_t boundaries_size = boundaries.size();
+        size_t counts_size     = counts.size();
 
         sout_ << "\n  buckets     : " << '[';
 
-        for (int i = 0; i < boundaries_size; i++)
+        for (size_t i = 0; i < boundaries_size; i++)
         {
           sout_ << boundaries[i];
 
@@ -119,7 +120,7 @@ private:
         sout_ << ']';
 
         sout_ << "\n  counts      : " << '[';
-        for (int i = 0; i < counts_size; i++)
+        for (size_t i = 0; i < counts_size; i++)
         {
           sout_ << counts[i];
 
@@ -129,17 +130,16 @@ private:
         sout_ << ']';
       }
       break;
-      case sdkmetrics::AggregatorKind::Sketch:
-      {
+      case sdkmetrics::AggregatorKind::Sketch: {
         auto boundaries = agg->get_boundaries();
         auto counts     = agg->get_counts();
 
-        int boundaries_size = boundaries.size();
-        int counts_size     = counts.size();
+        size_t boundaries_size = boundaries.size();
+        size_t counts_size     = counts.size();
 
         sout_ << "\n  buckets     : " << '[';
 
-        for (int i = 0; i < boundaries_size; i++)
+        for (size_t i = 0; i < boundaries_size; i++)
         {
           sout_ << boundaries[i];
 
@@ -149,7 +149,7 @@ private:
         sout_ << ']';
 
         sout_ << "\n  counts      : " << '[';
-        for (int i = 0; i < counts_size; i++)
+        for (size_t i = 0; i < counts_size; i++)
         {
           sout_ << counts[i];
 
@@ -165,3 +165,4 @@ private:
 }  // namespace metrics
 }  // namespace exporter
 OPENTELEMETRY_END_NAMESPACE
+#endif

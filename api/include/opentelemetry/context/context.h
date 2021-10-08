@@ -1,5 +1,9 @@
+﻿// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
+#include <cstring>
 #include "opentelemetry/context/context_value.h"
 #include "opentelemetry/nostd/shared_ptr.h"
 #include "opentelemetry/nostd/string_view.h"
@@ -38,8 +42,8 @@ public:
   template <class T>
   Context SetValues(T &values) noexcept
   {
-    Context context                   = Context(values);
-    nostd::shared_ptr<DataList> &last = context.head_;
+    Context context                  = Context(values);
+    nostd::shared_ptr<DataList> last = context.head_;
     while (last->next_ != nullptr)
     {
       last = last->next_;
@@ -59,47 +63,37 @@ public:
   }
 
   // Returns the value associated with the passed in key.
-  context::ContextValue GetValue(const nostd::string_view key) noexcept
+  context::ContextValue GetValue(const nostd::string_view key) const noexcept
   {
     for (DataList *data = head_.get(); data != nullptr; data = data->next_.get())
     {
       if (key.size() == data->key_length_)
       {
-        if (memcmp(key.data(), data->key_, data->key_length_) == 0)
+        if (std::memcmp(key.data(), data->key_, data->key_length_) == 0)
         {
           return data->value_;
         }
       }
     }
-    return (int64_t)0;
+    return ContextValue{};
   }
 
   // Checks for key and returns true if found
-  bool HasKey(const nostd::string_view key) noexcept
+  bool HasKey(const nostd::string_view key) const noexcept
   {
-    for (DataList *data = head_.get(); data != nullptr; data = data->next_.get())
-    {
-      if (key.size() == data->key_length_)
-      {
-        if (memcmp(key.data(), data->key_, data->key_length_) == 0)
-        {
-          return true;
-        }
-      }
-    }
-    return false;
+    return !nostd::holds_alternative<nostd::monostate>(GetValue(key));
   }
 
-  bool operator==(const Context &other) { return (head_ == other.head_); }
+  bool operator==(const Context &other) const noexcept { return (head_ == other.head_); }
 
 private:
   // A linked list to contain the keys and values of this context node
   class DataList
   {
   public:
-    nostd::shared_ptr<DataList> next_;
-
     char *key_;
+
+    nostd::shared_ptr<DataList> next_;
 
     size_t key_length_;
 
@@ -109,7 +103,7 @@ private:
 
     // Builds a data list off of a key and value iterable and returns the head
     template <class T>
-    DataList(const T &keys_and_vals) : key_{nullptr}
+    DataList(const T &keys_and_vals) : key_{nullptr}, next_(nostd::shared_ptr<DataList>{nullptr})
     {
       bool first = true;
       auto *node = this;
@@ -130,7 +124,7 @@ private:
 
     // Builds a data list with just a key and value, so it will just be the head
     // and returns that head.
-    DataList(nostd::string_view key, ContextValue value)
+    DataList(nostd::string_view key, const ContextValue &value)
     {
       key_        = new char[key.size()];
       key_length_ = key.size();
@@ -139,7 +133,7 @@ private:
       next_  = nostd::shared_ptr<DataList>{nullptr};
     }
 
-    DataList &operator=(DataList &&other)
+    DataList &operator=(DataList &&other) noexcept
     {
       key_length_ = other.key_length_;
       value_      = std::move(other.value_);

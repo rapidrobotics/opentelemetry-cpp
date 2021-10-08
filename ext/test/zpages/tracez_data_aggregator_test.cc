@@ -1,9 +1,12 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #include "opentelemetry/ext/zpages/tracez_data_aggregator.h"
 
 #include <gtest/gtest.h>
 
-#include "opentelemetry/context/threadlocal_context.h"
 #include "opentelemetry/ext/zpages/tracez_processor.h"
+#include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/sdk/trace/recordable.h"
 #include "opentelemetry/sdk/trace/tracer.h"
 
@@ -11,8 +14,8 @@ using namespace opentelemetry::sdk::trace;
 using namespace opentelemetry::ext::zpages;
 namespace nostd  = opentelemetry::nostd;
 namespace common = opentelemetry::common;
-using opentelemetry::core::SteadyTimestamp;
-using opentelemetry::v0::trace::Span;
+using opentelemetry::common::SteadyTimestamp;
+using opentelemetry::trace::Span;
 
 const std::string span_name1 = "span 1";
 const std::string span_name2 = "span 2";
@@ -34,10 +37,16 @@ class TracezDataAggregatorTest : public ::testing::Test
 protected:
   void SetUp() override
   {
-    std::shared_ptr<TracezSpanProcessor> processor(new TracezSpanProcessor());
-    tracer                 = std::shared_ptr<opentelemetry::trace::Tracer>(new Tracer(processor));
+    std::shared_ptr<TracezSharedData> shared_data(new TracezSharedData());
+    auto resource = opentelemetry::sdk::resource::Resource::Create({});
+    std::unique_ptr<SpanProcessor> processor(new TracezSpanProcessor(shared_data));
+    std::vector<std::unique_ptr<SpanProcessor>> processors;
+    processors.push_back(std::move(processor));
+
+    auto context           = std::make_shared<TracerContext>(std::move(processors), resource);
+    tracer                 = std::shared_ptr<opentelemetry::trace::Tracer>(new Tracer(context));
     tracez_data_aggregator = std::unique_ptr<TracezDataAggregator>(
-        new TracezDataAggregator(processor, milliseconds(10)));
+        new TracezDataAggregator(shared_data, milliseconds(10)));
   }
 
   std::unique_ptr<TracezDataAggregator> tracez_data_aggregator;
@@ -51,8 +60,8 @@ protected:
 void VerifySpanCountsInTracezData(
     const std::string &span_name,
     const TracezData &aggregated_data,
-    unsigned int running_span_count,
-    unsigned int error_span_count,
+    size_t running_span_count,
+    size_t error_span_count,
     std::array<unsigned int, kLatencyBoundaries.size()> completed_span_count_per_latency_bucket)
 {
   // Asserts are needed to check the size of the container because they may need
@@ -61,14 +70,14 @@ void VerifySpanCountsInTracezData(
       << " Count of running spans incorrect for " << span_name << "\n";
 
   EXPECT_EQ(aggregated_data.sample_running_spans.size(),
-            std::min<unsigned int>(running_span_count, kMaxNumberOfSampleSpans))
+            std::min<size_t>(running_span_count, kMaxNumberOfSampleSpans))
       << " Size of sample running spans incorrect for " << span_name << "\n";
 
   EXPECT_EQ(aggregated_data.error_span_count, error_span_count)
       << " Count of error spans incorrect for " << span_name << "\n";
 
   EXPECT_EQ(aggregated_data.sample_error_spans.size(),
-            std::min<unsigned int>(error_span_count, kMaxNumberOfSampleSpans))
+            std::min<size_t>(error_span_count, kMaxNumberOfSampleSpans))
       << " Count of running spans incorrect for " << span_name << "\n";
 
   for (unsigned int boundary = 0; boundary < kLatencyBoundaries.size(); boundary++)
@@ -78,8 +87,8 @@ void VerifySpanCountsInTracezData(
         << " Count of completed spans in latency boundary " << boundary << " incorrect for "
         << span_name << "\n";
     EXPECT_EQ(aggregated_data.sample_latency_spans[boundary].size(),
-              std::min<unsigned int>(completed_span_count_per_latency_bucket[boundary],
-                                     kMaxNumberOfSampleSpans))
+              std::min<size_t>(completed_span_count_per_latency_bucket[boundary],
+                               kMaxNumberOfSampleSpans))
         << " Count of sample completed spans in latency boundary " << boundary << " incorrect for "
         << span_name << "\n";
   }
@@ -155,7 +164,7 @@ TEST_F(TracezDataAggregatorTest, SingleErrorSpan)
 {
   // Start and end a single error span
   auto span = tracer->StartSpan(span_name1);
-  span->SetStatus(opentelemetry::trace::CanonicalCode::CANCELLED, "span cancelled");
+  span->SetStatus(opentelemetry::trace::StatusCode::kError, "span cancelled");
   span->End();
   std::this_thread::sleep_for(milliseconds(500));
   auto data = tracez_data_aggregator->GetAggregatedTracezData();
@@ -319,7 +328,7 @@ TEST_F(TracezDataAggregatorTest, MultipleErrorSpans)
     for (auto error_desc : span_error.second)
     {
       auto span = tracer->StartSpan(span_error.first);
-      span->SetStatus(opentelemetry::trace::CanonicalCode::CANCELLED, error_desc);
+      span->SetStatus(opentelemetry::trace::StatusCode::kError, error_desc);
       span->End();
     }
   }
@@ -357,7 +366,7 @@ TEST_F(TracezDataAggregatorTest, MultipleErrorSpans)
 /**
  * This test checks to see that the maximum number of running samples(5) for a
  * bucket is not exceeded. If there are more spans than this for a single bucket
- * it removes the earliest span that was recieved
+ * it removes the earliest span that was received
  */
 TEST_F(TracezDataAggregatorTest, RunningSampleSpansOverCapacity)
 {
@@ -388,7 +397,7 @@ TEST_F(TracezDataAggregatorTest, RunningSampleSpansOverCapacity)
 /**
  * This test checks to see that the maximum number of error samples(5) for a
  * bucket is not exceeded. If there are more spans than this for a single bucket
- * it removes the earliest span that was recieved
+ * it removes the earliest span that was received
  */
 TEST_F(TracezDataAggregatorTest, ErrorSampleSpansOverCapacity)
 {
@@ -399,7 +408,7 @@ TEST_F(TracezDataAggregatorTest, ErrorSampleSpansOverCapacity)
   for (auto span_error_description : span_error_descriptions)
   {
     auto span = tracer->StartSpan(span_name1);
-    span->SetStatus(opentelemetry::trace::CanonicalCode::CANCELLED, span_error_description);
+    span->SetStatus(opentelemetry::trace::StatusCode::kError, span_error_description);
     span->End();
   }
 
@@ -430,7 +439,7 @@ TEST_F(TracezDataAggregatorTest, ErrorSampleSpansOverCapacity)
 /**
  * This test checks to see that the maximum number of latency samples(5) for a
  * bucket is not exceeded. If there are more spans than this for a single bucket
- * it removes the earliest span that was recieved
+ * it removes the earliest span that was received
  */
 TEST_F(TracezDataAggregatorTest, CompletedSampleSpansOverCapacity)
 {
@@ -489,7 +498,7 @@ TEST_F(TracezDataAggregatorTest, SpanNameInAlphabeticalOrder)
   auto span_first = tracer->StartSpan(span_name2);
   tracer->StartSpan(span_name1)->End();
   auto span_third = tracer->StartSpan(span_name3);
-  span_third->SetStatus(opentelemetry::trace::CanonicalCode::CANCELLED, "span cancelled");
+  span_third->SetStatus(opentelemetry::trace::StatusCode::kError, "span cancelled");
   span_third->End();
   std::this_thread::sleep_for(milliseconds(500));
   // Get data and check if span name exists in aggregation
@@ -669,7 +678,7 @@ TEST_F(TracezDataAggregatorTest, NoChangeInBetweenCallsToAggregator)
   tracer->StartSpan(span_name1, start)->End(end);
   auto running_span = tracer->StartSpan(span_name2);
   auto span         = tracer->StartSpan(span_name3);
-  span->SetStatus(opentelemetry::trace::CanonicalCode::CANCELLED, "span cancelled");
+  span->SetStatus(opentelemetry::trace::StatusCode::kError, "span cancelled");
   span->End();
   std::this_thread::sleep_for(milliseconds(500));
   auto data = tracez_data_aggregator->GetAggregatedTracezData();

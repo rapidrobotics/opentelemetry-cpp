@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include <memory>
@@ -13,7 +16,8 @@ public:
   // opentelemetry::trace::Tracer
   opentelemetry::nostd::shared_ptr<opentelemetry::trace::Span> StartSpan(
       opentelemetry::nostd::string_view name,
-      const opentelemetry::trace::KeyValueIterable & /*attributes*/,
+      const opentelemetry::common::KeyValueIterable & /*attributes*/,
+      const opentelemetry::trace::SpanContextKeyValueIterable & /*links*/,
       const opentelemetry::trace::StartSpanOptions & /*options */) noexcept override;
 
   void ForceFlushWithMicroseconds(uint64_t /*timeout*/) noexcept override {}

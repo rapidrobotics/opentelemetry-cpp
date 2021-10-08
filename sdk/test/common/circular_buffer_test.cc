@@ -1,5 +1,9 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #include "opentelemetry/sdk/common/circular_buffer.h"
 
+#include <algorithm>
 #include <cassert>
 #include <random>
 #include <thread>
@@ -55,22 +59,20 @@ void RunNumberConsumer(CircularBuffer<uint32_t> &buffer,
 {
   while (true)
   {
-    auto allotment = buffer.Peek();
-    if (exit && allotment.empty())
+    if (exit && buffer.Peek().empty())
     {
       return;
     }
-    auto n = std::uniform_int_distribution<size_t>{0, allotment.size()}(RandomNumberGenerator);
-    buffer.Consume(
-        n, [&](CircularBufferRange<AtomicUniquePtr<uint32_t>> range) noexcept {
-          assert(range.size() == n);
-          range.ForEach([&](AtomicUniquePtr<uint32_t> & ptr) noexcept {
-            assert(!ptr.IsNull());
-            numbers.push_back(*ptr);
-            ptr.Reset();
-            return true;
-          });
-        });
+    auto n = std::uniform_int_distribution<size_t>{0, buffer.Peek().size()}(RandomNumberGenerator);
+    buffer.Consume(n, [&](CircularBufferRange<AtomicUniquePtr<uint32_t>> range) noexcept {
+      assert(range.size() == n);
+      range.ForEach([&](AtomicUniquePtr<uint32_t> &ptr) noexcept {
+        assert(!ptr.IsNull());
+        numbers.push_back(*ptr);
+        ptr.Reset();
+        return true;
+      });
+    });
   }
 }
 
@@ -123,14 +125,13 @@ TEST(CircularBufferTest, Consume)
     EXPECT_TRUE(buffer.Add(x));
   }
   int count = 0;
-  buffer.Consume(
-      5, [&](CircularBufferRange<AtomicUniquePtr<int>> range) noexcept {
-        range.ForEach([&](AtomicUniquePtr<int> &ptr) {
-          EXPECT_EQ(*ptr, count++);
-          ptr.Reset();
-          return true;
-        });
-      });
+  buffer.Consume(5, [&](CircularBufferRange<AtomicUniquePtr<int>> range) noexcept {
+    range.ForEach([&](AtomicUniquePtr<int> &ptr) {
+      EXPECT_EQ(*ptr, count++);
+      ptr.Reset();
+      return true;
+    });
+  });
   EXPECT_EQ(count, 5);
 }
 
@@ -153,6 +154,8 @@ TEST(CircularBufferTest, Simulation)
     consumer.join();
     std::sort(producer_numbers.begin(), producer_numbers.end());
     std::sort(consumer_numbers.begin(), consumer_numbers.end());
+
+    EXPECT_EQ(producer_numbers.size(), consumer_numbers.size());
     EXPECT_EQ(producer_numbers, consumer_numbers);
   }
 }

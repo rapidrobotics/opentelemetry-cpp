@@ -1,9 +1,12 @@
-#include "opentelemetry/core/timestamp.h"
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+#include "opentelemetry/common/timestamp.h"
 
 #include <gtest/gtest.h>
 
-using opentelemetry::core::SteadyTimestamp;
-using opentelemetry::core::SystemTimestamp;
+using opentelemetry::common::SteadyTimestamp;
+using opentelemetry::common::SystemTimestamp;
 
 template <class Timestamp>
 static bool AreNearlyEqual(const Timestamp &t1, const Timestamp &t2) noexcept

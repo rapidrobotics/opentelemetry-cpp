@@ -1,13 +1,19 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
-#include <algorithm>
-#include <cstddef>
-#include <cstring>
-#include <ostream>
-#include <stdexcept>
-#include <string>
+#ifdef HAVE_CPP_STDLIB
+#  include "opentelemetry/std/string_view.h"
+#else
+#  include <algorithm>
+#  include <cstddef>
+#  include <cstring>
+#  include <ostream>
+#  include <stdexcept>
+#  include <string>
 
-#include "opentelemetry/version.h"
+#  include "opentelemetry/version.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace nostd
@@ -58,11 +64,11 @@ public:
   {
     if (pos > length_)
     {
-#if __EXCEPTIONS
+#  if __EXCEPTIONS
       throw std::out_of_range{"opentelemetry::nostd::string_view"};
-#else
+#  else
       std::terminate();
-#endif
+#  endif
     }
     n = (std::min)(n, length_ - pos);
     return string_view(data_ + pos, n);
@@ -70,7 +76,7 @@ public:
 
   int compare(string_view v) const noexcept
   {
-    size_type len = std::min(size(), v.size());
+    size_type len = (std::min)(size(), v.size());
     int result    = Traits::compare(data(), v.data(), len);
     if (result == 0)
       result = size() == v.size() ? 0 : (size() < v.size() ? -1 : 1);
@@ -103,6 +109,20 @@ public:
     return substr(pos1, count1).compare(string_view(s, count2));
   };
 
+  size_type find(char ch, size_type pos = 0) const noexcept
+  {
+    size_type res = npos;
+    if (pos < length())
+    {
+      auto found = Traits::find(data() + pos, length() - pos, ch);
+      if (found)
+      {
+        res = found - data();
+      }
+    }
+    return res;
+  }
+
   bool operator<(const string_view v) const noexcept { return compare(v) < 0; }
 
   bool operator>(const string_view v) const noexcept { return compare(v) > 0; }
@@ -118,7 +138,12 @@ private:
 inline bool operator==(string_view lhs, string_view rhs) noexcept
 {
   return lhs.length() == rhs.length() &&
+#  if _MSC_VER == 1900
+         // Avoid SCL error in Visual Studio 2015
+         (std::memcmp(lhs.data(), rhs.data(), lhs.length()) == 0);
+#  else
          std::equal(lhs.data(), lhs.data() + lhs.length(), rhs.data());
+#  endif
 }
 
 inline bool operator==(string_view lhs, const std::string &rhs) noexcept
@@ -172,3 +197,19 @@ inline std::ostream &operator<<(std::ostream &os, string_view s)
 }
 }  // namespace nostd
 OPENTELEMETRY_END_NAMESPACE
+
+namespace std
+{
+template <>
+struct hash<OPENTELEMETRY_NAMESPACE::nostd::string_view>
+{
+  std::size_t operator()(const OPENTELEMETRY_NAMESPACE::nostd::string_view &k) const
+  {
+    // TODO: for C++17 that has native support for std::basic_string_view it would
+    // be more performance-efficient to provide a zero-copy hash.
+    auto s = std::string(k.data(), k.size());
+    return std::hash<std::string>{}(s);
+  }
+};
+}  // namespace std
+#endif

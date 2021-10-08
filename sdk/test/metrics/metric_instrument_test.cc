@@ -1,13 +1,16 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include <gtest/gtest.h>
-#include <cstring>
-#include <iostream>
-#include <map>
-#include <memory>
-#include <string>
-#include <thread>
-#include "opentelemetry/sdk/metrics/async_instruments.h"
-#include "opentelemetry/sdk/metrics/sync_instruments.h"
+#ifdef ENABLE_METRICS_PREVIEW
+#  include <gtest/gtest.h>
+#  include <cstring>
+#  include <iostream>
+#  include <map>
+#  include <memory>
+#  include <string>
+#  include <thread>
+#  include "opentelemetry/sdk/metrics/async_instruments.h"
+#  include "opentelemetry/sdk/metrics/sync_instruments.h"
 
 namespace metrics_api = opentelemetry::metrics;
 
@@ -20,7 +23,7 @@ namespace metrics
 void ObserverConstructorCallback(metrics_api::ObserverResult<int> result)
 {
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
   result.observe(1, labelkv);
 }
 
@@ -31,7 +34,7 @@ TEST(ApiSdkConversion, async)
           new ValueObserver<int>("ankit", "none", "unitles", true, &ObserverConstructorCallback));
 
   std::map<std::string, std::string> labels = {{"key587", "value264"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   alpha->observe(123456, labelkv);
   EXPECT_EQ(dynamic_cast<AsynchronousInstrument<int> *>(alpha.get())->GetRecords()[0].GetLabels(),
@@ -50,7 +53,7 @@ TEST(IntValueObserver, InstrumentFunctions)
   ValueObserver<int> alpha("enabled", "no description", "unitless", true,
                            &ObserverConstructorCallback);
   std::map<std::string, std::string> labels = {{"key", "value"}};
-  auto labelkv                              = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   EXPECT_EQ(alpha.GetName(), "enabled");
   EXPECT_EQ(alpha.GetDescription(), "no description");
@@ -64,7 +67,7 @@ TEST(IntValueObserver, InstrumentFunctions)
 
 void ObserverCallback(std::shared_ptr<ValueObserver<int>> in,
                       int freq,
-                      const trace::KeyValueIterable &labels)
+                      const common::KeyValueIterable &labels)
 {
   for (int i = 0; i < freq; i++)
   {
@@ -74,7 +77,7 @@ void ObserverCallback(std::shared_ptr<ValueObserver<int>> in,
 
 void NegObserverCallback(std::shared_ptr<ValueObserver<int>> in,
                          int freq,
-                         const trace::KeyValueIterable &labels)
+                         const common::KeyValueIterable &labels)
 {
   for (int i = 0; i < freq; i++)
   {
@@ -89,8 +92,8 @@ TEST(IntValueObserver, StressObserve)
 
   std::map<std::string, std::string> labels  = {{"key", "value"}};
   std::map<std::string, std::string> labels1 = {{"key1", "value1"}};
-  auto labelkv  = trace::KeyValueIterableView<decltype(labels)>{labels};
-  auto labelkv1 = trace::KeyValueIterableView<decltype(labels1)>{labels1};
+  auto labelkv  = common::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv1 = common::KeyValueIterableView<decltype(labels1)>{labels1};
 
   std::thread first(ObserverCallback, alpha, 25,
                     labelkv);  // spawn new threads that call the callback
@@ -116,7 +119,7 @@ TEST(IntValueObserver, StressObserve)
 
 void SumObserverCallback(std::shared_ptr<SumObserver<int>> in,
                          int freq,
-                         const trace::KeyValueIterable &labels)
+                         const common::KeyValueIterable &labels)
 {
   for (int i = 0; i < freq; i++)
   {
@@ -131,8 +134,8 @@ TEST(IntSumObserver, StressObserve)
 
   std::map<std::string, std::string> labels  = {{"key", "value"}};
   std::map<std::string, std::string> labels1 = {{"key1", "value1"}};
-  auto labelkv  = trace::KeyValueIterableView<decltype(labels)>{labels};
-  auto labelkv1 = trace::KeyValueIterableView<decltype(labels1)>{labels1};
+  auto labelkv  = common::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv1 = common::KeyValueIterableView<decltype(labels1)>{labels1};
 
   std::thread first(SumObserverCallback, alpha, 100000, labelkv);
   std::thread second(SumObserverCallback, alpha, 100000, labelkv);
@@ -148,7 +151,7 @@ TEST(IntSumObserver, StressObserve)
 
 void UpDownSumObserverCallback(std::shared_ptr<UpDownSumObserver<int>> in,
                                int freq,
-                               const trace::KeyValueIterable &labels)
+                               const common::KeyValueIterable &labels)
 {
   for (int i = 0; i < freq; i++)
   {
@@ -158,7 +161,7 @@ void UpDownSumObserverCallback(std::shared_ptr<UpDownSumObserver<int>> in,
 
 void NegUpDownSumObserverCallback(std::shared_ptr<UpDownSumObserver<int>> in,
                                   int freq,
-                                  const trace::KeyValueIterable &labels)
+                                  const common::KeyValueIterable &labels)
 {
   for (int i = 0; i < freq; i++)
   {
@@ -173,8 +176,8 @@ TEST(IntUpDownObserver, StressAdd)
 
   std::map<std::string, std::string> labels  = {{"key", "value"}};
   std::map<std::string, std::string> labels1 = {{"key1", "value1"}};
-  auto labelkv  = trace::KeyValueIterableView<decltype(labels)>{labels};
-  auto labelkv1 = trace::KeyValueIterableView<decltype(labels1)>{labels1};
+  auto labelkv  = common::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv1 = common::KeyValueIterableView<decltype(labels1)>{labels1};
 
   std::thread first(UpDownSumObserverCallback, alpha, 12340,
                     labelkv);  // spawn new threads that call the callback
@@ -216,10 +219,10 @@ TEST(Counter, Binding)
   std::map<std::string, std::string> labels2 = {{"key2", "value2"}, {"key3", "value3"}};
   std::map<std::string, std::string> labels3 = {{"key3", "value3"}, {"key2", "value2"}};
 
-  auto labelkv  = trace::KeyValueIterableView<decltype(labels)>{labels};
-  auto labelkv1 = trace::KeyValueIterableView<decltype(labels1)>{labels1};
-  auto labelkv2 = trace::KeyValueIterableView<decltype(labels2)>{labels2};
-  auto labelkv3 = trace::KeyValueIterableView<decltype(labels3)>{labels3};
+  auto labelkv  = common::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv1 = common::KeyValueIterableView<decltype(labels1)>{labels1};
+  auto labelkv2 = common::KeyValueIterableView<decltype(labels2)>{labels2};
+  auto labelkv3 = common::KeyValueIterableView<decltype(labels3)>{labels3};
 
   auto beta    = alpha.bindCounter(labelkv);
   auto gamma   = alpha.bindCounter(labelkv1);
@@ -246,7 +249,7 @@ TEST(Counter, getAggsandnewupdate)
 
   std::map<std::string, std::string> labels = {{"key3", "value3"}, {"key2", "value2"}};
 
-  auto labelkv = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
   auto beta    = alpha.bindCounter(labelkv);
   beta->add(1);
   beta->unbind();
@@ -263,7 +266,7 @@ TEST(Counter, getAggsandnewupdate)
 
 void CounterCallback(std::shared_ptr<Counter<int>> in,
                      int freq,
-                     const trace::KeyValueIterable &labels)
+                     const common::KeyValueIterable &labels)
 {
   for (int i = 0; i < freq; i++)
   {
@@ -278,8 +281,8 @@ TEST(Counter, StressAdd)
   std::map<std::string, std::string> labels  = {{"key", "value"}};
   std::map<std::string, std::string> labels1 = {{"key1", "value1"}};
 
-  auto labelkv  = trace::KeyValueIterableView<decltype(labels)>{labels};
-  auto labelkv1 = trace::KeyValueIterableView<decltype(labels1)>{labels1};
+  auto labelkv  = common::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv1 = common::KeyValueIterableView<decltype(labels1)>{labels1};
 
   std::thread first(CounterCallback, alpha, 1000, labelkv);
   std::thread second(CounterCallback, alpha, 1000, labelkv);
@@ -301,7 +304,7 @@ TEST(Counter, StressAdd)
 
 void UpDownCounterCallback(std::shared_ptr<UpDownCounter<int>> in,
                            int freq,
-                           const trace::KeyValueIterable &labels)
+                           const common::KeyValueIterable &labels)
 {
   for (int i = 0; i < freq; i++)
   {
@@ -311,7 +314,7 @@ void UpDownCounterCallback(std::shared_ptr<UpDownCounter<int>> in,
 
 void NegUpDownCounterCallback(std::shared_ptr<UpDownCounter<int>> in,
                               int freq,
-                              const trace::KeyValueIterable &labels)
+                              const common::KeyValueIterable &labels)
 {
   for (int i = 0; i < freq; i++)
   {
@@ -326,8 +329,8 @@ TEST(IntUpDownCounter, StressAdd)
 
   std::map<std::string, std::string> labels  = {{"key", "value"}};
   std::map<std::string, std::string> labels1 = {{"key1", "value1"}};
-  auto labelkv  = trace::KeyValueIterableView<decltype(labels)>{labels};
-  auto labelkv1 = trace::KeyValueIterableView<decltype(labels1)>{labels1};
+  auto labelkv  = common::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv1 = common::KeyValueIterableView<decltype(labels1)>{labels1};
 
   std::thread first(UpDownCounterCallback, alpha, 12340,
                     labelkv);  // spawn new threads that call the callback
@@ -354,7 +357,7 @@ TEST(IntUpDownCounter, StressAdd)
 
 void RecorderCallback(std::shared_ptr<ValueRecorder<int>> in,
                       int freq,
-                      const trace::KeyValueIterable &labels)
+                      const common::KeyValueIterable &labels)
 {
   for (int i = 0; i < freq; i++)
   {
@@ -364,7 +367,7 @@ void RecorderCallback(std::shared_ptr<ValueRecorder<int>> in,
 
 void NegRecorderCallback(std::shared_ptr<ValueRecorder<int>> in,
                          int freq,
-                         const trace::KeyValueIterable &labels)
+                         const common::KeyValueIterable &labels)
 {
   for (int i = 0; i < freq; i++)
   {
@@ -379,8 +382,8 @@ TEST(IntValueRecorder, StressRecord)
 
   std::map<std::string, std::string> labels  = {{"key", "value"}};
   std::map<std::string, std::string> labels1 = {{"key1", "value1"}};
-  auto labelkv  = trace::KeyValueIterableView<decltype(labels)>{labels};
-  auto labelkv1 = trace::KeyValueIterableView<decltype(labels1)>{labels1};
+  auto labelkv  = common::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv1 = common::KeyValueIterableView<decltype(labels1)>{labels1};
 
   std::thread first(RecorderCallback, alpha, 25,
                     labelkv);  // spawn new threads that call the callback
@@ -445,7 +448,7 @@ TEST(Instruments, NoUpdateNoRecord)
 
   std::map<std::string, std::string> labels = {{"key", "value"}};
 
-  auto labelkv = trace::KeyValueIterableView<decltype(labels)>{labels};
+  auto labelkv = common::KeyValueIterableView<decltype(labels)>{labels};
 
   EXPECT_EQ(alpha.GetRecords().size(), 0);
   alpha.add(1, labelkv);
@@ -467,3 +470,4 @@ TEST(Instruments, NoUpdateNoRecord)
 }  // namespace metrics
 }  // namespace sdk
 OPENTELEMETRY_END_NAMESPACE
+#endif

@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 // Please refer to provider.h for documentation on how to obtain a Tracer object.
 //
@@ -9,6 +12,7 @@
 #include "opentelemetry/nostd/unique_ptr.h"
 #include "opentelemetry/trace/span.h"
 #include "opentelemetry/trace/span_context.h"
+#include "opentelemetry/trace/span_context_kv_iterable.h"
 #include "opentelemetry/trace/tracer.h"
 #include "opentelemetry/trace/tracer_provider.h"
 #include "opentelemetry/version.h"
@@ -24,7 +28,14 @@ namespace trace
 class NoopSpan final : public Span
 {
 public:
-  explicit NoopSpan(const std::shared_ptr<Tracer> &tracer) noexcept : tracer_{tracer} {}
+  explicit NoopSpan(const std::shared_ptr<Tracer> &tracer) noexcept
+      : tracer_{tracer}, span_context_{new SpanContext(false, false)}
+  {}
+
+  explicit NoopSpan(const std::shared_ptr<Tracer> &tracer,
+                    nostd::unique_ptr<SpanContext> span_context) noexcept
+      : tracer_{tracer}, span_context_{std::move(span_context)}
+  {}
 
   void SetAttribute(nostd::string_view /*key*/,
                     const common::AttributeValue & /*value*/) noexcept override
@@ -32,15 +43,16 @@ public:
 
   void AddEvent(nostd::string_view /*name*/) noexcept override {}
 
-  void AddEvent(nostd::string_view /*name*/, core::SystemTimestamp /*timestamp*/) noexcept override
+  void AddEvent(nostd::string_view /*name*/,
+                common::SystemTimestamp /*timestamp*/) noexcept override
   {}
 
   void AddEvent(nostd::string_view /*name*/,
-                core::SystemTimestamp /*timestamp*/,
-                const trace::KeyValueIterable & /*attributes*/) noexcept override
+                common::SystemTimestamp /*timestamp*/,
+                const common::KeyValueIterable & /*attributes*/) noexcept override
   {}
 
-  void SetStatus(CanonicalCode /*code*/, nostd::string_view /*description*/) noexcept override {}
+  void SetStatus(StatusCode /*code*/, nostd::string_view /*description*/) noexcept override {}
 
   void UpdateName(nostd::string_view /*name*/) noexcept override {}
 
@@ -48,13 +60,11 @@ public:
 
   bool IsRecording() const noexcept override { return false; }
 
-  SpanContext GetContext() const noexcept override { return span_context_; }
-
-  void SetToken(nostd::unique_ptr<context::Token> && /* token */) noexcept override {}
+  SpanContext GetContext() const noexcept override { return *span_context_.get(); }
 
 private:
   std::shared_ptr<Tracer> tracer_;
-  SpanContext span_context_;
+  nostd::unique_ptr<SpanContext> span_context_;
 };
 
 /**
@@ -65,10 +75,16 @@ class NoopTracer final : public Tracer, public std::enable_shared_from_this<Noop
 public:
   // Tracer
   nostd::shared_ptr<Span> StartSpan(nostd::string_view /*name*/,
-                                    const KeyValueIterable & /*attributes*/,
+                                    const common::KeyValueIterable & /*attributes*/,
+                                    const SpanContextKeyValueIterable & /*links*/,
                                     const StartSpanOptions & /*options*/) noexcept override
   {
-    return nostd::shared_ptr<Span>{new (std::nothrow) NoopSpan{this->shared_from_this()}};
+    // Don't allocate a no-op span for every StartSpan call, but use a static
+    // singleton for this case.
+    static nostd::shared_ptr<trace_api::Span> noop_span(
+        new trace_api::NoopSpan{this->shared_from_this()});
+
+    return noop_span;
   }
 
   void ForceFlushWithMicroseconds(uint64_t /*timeout*/) noexcept override {}
@@ -87,9 +103,9 @@ public:
             new opentelemetry::trace::NoopTracer)}
   {}
 
-  nostd::shared_ptr<opentelemetry::trace::Tracer> GetTracer(
-      nostd::string_view library_name,
-      nostd::string_view library_version) override
+  nostd::shared_ptr<opentelemetry::trace::Tracer> GetTracer(nostd::string_view library_name,
+                                                            nostd::string_view library_version,
+                                                            nostd::string_view schema_url) override
   {
     return tracer_;
   }

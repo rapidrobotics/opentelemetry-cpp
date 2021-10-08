@@ -1,33 +1,21 @@
-/*
- * Copyright The OpenTelemetry Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include <map>
-#include <numeric>
-#include <string>
-#include <typeinfo>
+#ifdef ENABLE_METRICS_PREVIEW
+#  include <gtest/gtest.h>
+#  include <map>
+#  include <numeric>
+#  include <string>
+#  include <typeinfo>
 
-#include <gtest/gtest.h>
-#include <opentelemetry/version.h>
-#include "opentelemetry/exporters/prometheus/prometheus_exporter_utils.h"
-#include "opentelemetry/sdk/metrics/aggregator/counter_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/exact_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/gauge_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/histogram_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/min_max_sum_count_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/sketch_aggregator.h"
+#  include <opentelemetry/version.h>
+#  include "opentelemetry/exporters/prometheus/prometheus_exporter_utils.h"
+#  include "opentelemetry/sdk/metrics/aggregator/counter_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/exact_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/gauge_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/histogram_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/min_max_sum_count_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/sketch_aggregator.h"
 
 using opentelemetry::exporter::prometheus::PrometheusExporterUtils;
 namespace metric_sdk        = opentelemetry::sdk::metrics;
@@ -52,26 +40,22 @@ void assert_basic(prometheus_client::MetricFamily &metric,
 
   switch (type)
   {
-    case prometheus_client::MetricType::Counter:
-    {
+    case prometheus_client::MetricType::Counter: {
       ASSERT_DOUBLE_EQ(metric_data.counter.value, vals[0]);
       break;
     }
-    case prometheus_client::MetricType::Gauge:
-    {
+    case prometheus_client::MetricType::Gauge: {
       ASSERT_EQ(metric_data.gauge.value, vals[0]);
       break;
     }
-    case prometheus_client::MetricType::Histogram:
-    {
+    case prometheus_client::MetricType::Histogram: {
       ASSERT_DOUBLE_EQ(metric_data.histogram.sample_count, vals[0]);
       ASSERT_DOUBLE_EQ(metric_data.histogram.sample_sum, vals[1]);
       auto buckets = metric_data.histogram.bucket;
       ASSERT_EQ(buckets.size(), vals[2]);
       break;
     }
-    case prometheus_client::MetricType::Summary:
-    {
+    case prometheus_client::MetricType::Summary: {
       ASSERT_DOUBLE_EQ(metric_data.summary.sample_count, vals[0]);
       ASSERT_DOUBLE_EQ(metric_data.summary.sample_sum, vals[1]);
       break;
@@ -87,7 +71,7 @@ void assert_histogram(prometheus_client::MetricFamily &metric,
 {
   int cumulative_count = 0;
   auto buckets         = metric.metric[0].histogram.bucket;
-  for (int i = 0; i < buckets.size(); i++)
+  for (size_t i = 0; i < buckets.size(); i++)
   {
     auto bucket = buckets[i];
     if (i != buckets.size() - 1)
@@ -473,3 +457,4 @@ TEST(PrometheusExporterUtils, TranslateToPrometheusMultipleAggregators)
                prometheus_client::MetricType::Gauge, 1, vals);
 }
 OPENTELEMETRY_END_NAMESPACE
+#endif

@@ -1,35 +1,23 @@
-/*
- * Copyright The OpenTelemetry Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include <gtest/gtest.h>
-#include <future>
-#include <map>
-#include <thread>
+#ifdef ENABLE_METRICS_PREVIEW
+#  include <gtest/gtest.h>
+#  include <future>
+#  include <map>
+#  include <thread>
 
-#include "opentelemetry/exporters/prometheus/prometheus_collector.h"
-#include "opentelemetry/metrics/instrument.h"
-#include "opentelemetry/sdk/metrics/aggregator/aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/counter_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/exact_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/gauge_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/histogram_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/min_max_sum_count_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/sketch_aggregator.h"
-#include "opentelemetry/sdk/metrics/record.h"
-#include "opentelemetry/version.h"
+#  include "opentelemetry/exporters/prometheus/prometheus_collector.h"
+#  include "opentelemetry/metrics/instrument.h"
+#  include "opentelemetry/sdk/metrics/aggregator/aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/counter_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/exact_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/gauge_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/histogram_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/min_max_sum_count_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/sketch_aggregator.h"
+#  include "opentelemetry/sdk/metrics/record.h"
+#  include "opentelemetry/version.h"
 
 using opentelemetry::exporter::prometheus::PrometheusCollector;
 
@@ -46,41 +34,35 @@ std::shared_ptr<metric_sdk::Aggregator<T>> CreateAgg(metric_sdk::AggregatorKind 
   std::shared_ptr<metric_sdk::Aggregator<T>> aggregator;
   switch (kind)
   {
-    case metric_sdk::AggregatorKind::Counter:
-    {
+    case metric_sdk::AggregatorKind::Counter: {
       aggregator = std::shared_ptr<metric_sdk::Aggregator<T>>(
           new metric_sdk::CounterAggregator<T>(opentelemetry::metrics::InstrumentKind::Counter));
       break;
     }
-    case metric_sdk::AggregatorKind::MinMaxSumCount:
-    {
+    case metric_sdk::AggregatorKind::MinMaxSumCount: {
       aggregator =
           std::shared_ptr<metric_sdk::Aggregator<T>>(new metric_sdk::MinMaxSumCountAggregator<T>(
               opentelemetry::metrics::InstrumentKind::Counter));
       break;
     }
-    case metric_sdk::AggregatorKind::Gauge:
-    {
+    case metric_sdk::AggregatorKind::Gauge: {
       aggregator = std::shared_ptr<metric_sdk::Aggregator<T>>(
           new metric_sdk::GaugeAggregator<T>(opentelemetry::metrics::InstrumentKind::Counter));
       break;
     }
-    case metric_sdk::AggregatorKind::Sketch:
-    {
+    case metric_sdk::AggregatorKind::Sketch: {
       aggregator = std::shared_ptr<metric_sdk::Aggregator<T>>(new metric_sdk::SketchAggregator<T>(
           opentelemetry::metrics::InstrumentKind::Counter, 0.000005));
       break;
     }
-    case metric_sdk::AggregatorKind::Histogram:
-    {
+    case metric_sdk::AggregatorKind::Histogram: {
       std::vector<double> boundaries{10, 20};
       aggregator =
           std::shared_ptr<metric_sdk::Aggregator<T>>(new metric_sdk::HistogramAggregator<T>(
               opentelemetry::metrics::InstrumentKind::Counter, boundaries));
       break;
     }
-    case metric_sdk::AggregatorKind::Exact:
-    {
+    case metric_sdk::AggregatorKind::Exact: {
       aggregator = std::shared_ptr<metric_sdk::Aggregator<T>>(new metric_sdk::ExactAggregator<T>(
           opentelemetry::metrics::InstrumentKind::Counter, exactMode));
       break;
@@ -215,7 +197,7 @@ TEST(PrometheusCollector, AddMetricDataWithCounterRecordsSuccessfully)
     auto after_agg     = nostd::get<std::shared_ptr<metric_sdk::Aggregator<double>>>(after_agg_var);
 
     ASSERT_EQ(before_agg->get_checkpoint().size(), after_agg->get_checkpoint().size());
-    for (int i = 0; i < before_agg->get_checkpoint().size(); i++)
+    for (size_t i = 0; i < before_agg->get_checkpoint().size(); i++)
     {
       ASSERT_EQ(before_agg->get_checkpoint()[i], after_agg->get_checkpoint()[i]);
     }
@@ -267,7 +249,7 @@ TEST(PrometheusCollector, AddMetricDataWithMinMaxSumCountRecordsSuccessfully)
     auto after_agg     = nostd::get<std::shared_ptr<metric_sdk::Aggregator<short>>>(after_agg_var);
 
     ASSERT_EQ(before_agg->get_checkpoint().size(), after_agg->get_checkpoint().size());
-    for (int i = 0; i < before_agg->get_checkpoint().size(); i++)
+    for (size_t i = 0; i < before_agg->get_checkpoint().size(); i++)
     {
       ASSERT_EQ(before_agg->get_checkpoint()[i], after_agg->get_checkpoint()[i]);
     }
@@ -319,7 +301,7 @@ TEST(PrometheusCollector, AddMetricDataWithGaugeRecordsSuccessfully)
     auto after_agg     = nostd::get<std::shared_ptr<metric_sdk::Aggregator<int>>>(after_agg_var);
 
     ASSERT_EQ(before_agg->get_checkpoint().size(), after_agg->get_checkpoint().size());
-    for (int i = 0; i < before_agg->get_checkpoint().size(); i++)
+    for (size_t i = 0; i < before_agg->get_checkpoint().size(); i++)
     {
       ASSERT_EQ(before_agg->get_checkpoint()[i], after_agg->get_checkpoint()[i]);
     }
@@ -372,15 +354,15 @@ TEST(PrometheusCollector, AddMetricDataWithSketchRecordsSuccessfully)
     auto after_agg     = nostd::get<std::shared_ptr<metric_sdk::Aggregator<double>>>(after_agg_var);
 
     ASSERT_EQ(before_agg->get_checkpoint().size(), after_agg->get_checkpoint().size());
-    for (int i = 0; i < before_agg->get_checkpoint().size(); i++)
+    for (size_t i = 0; i < before_agg->get_checkpoint().size(); i++)
     {
       ASSERT_EQ(before_agg->get_checkpoint()[i], after_agg->get_checkpoint()[i]);
     }
-    for (int i = 0; i < before_agg->get_boundaries().size(); i++)
+    for (size_t i = 0; i < before_agg->get_boundaries().size(); i++)
     {
       ASSERT_EQ(before_agg->get_boundaries()[i], after_agg->get_boundaries()[i]);
     }
-    for (int i = 0; i < before_agg->get_counts().size(); i++)
+    for (size_t i = 0; i < before_agg->get_counts().size(); i++)
     {
       ASSERT_EQ(before_agg->get_counts()[i], after_agg->get_counts()[i]);
     }
@@ -433,15 +415,15 @@ TEST(PrometheusCollector, AddMetricDataWithHistogramRecordsSuccessfully)
     auto after_agg     = nostd::get<std::shared_ptr<metric_sdk::Aggregator<float>>>(after_agg_var);
 
     ASSERT_EQ(before_agg->get_checkpoint().size(), after_agg->get_checkpoint().size());
-    for (int i = 0; i < before_agg->get_checkpoint().size(); i++)
+    for (size_t i = 0; i < before_agg->get_checkpoint().size(); i++)
     {
       ASSERT_EQ(before_agg->get_checkpoint()[i], after_agg->get_checkpoint()[i]);
     }
-    for (int i = 0; i < before_agg->get_boundaries().size(); i++)
+    for (size_t i = 0; i < before_agg->get_boundaries().size(); i++)
     {
       ASSERT_EQ(before_agg->get_boundaries()[i], after_agg->get_boundaries()[i]);
     }
-    for (int i = 0; i < before_agg->get_counts().size(); i++)
+    for (size_t i = 0; i < before_agg->get_counts().size(); i++)
     {
       ASSERT_EQ(before_agg->get_counts()[i], after_agg->get_counts()[i]);
     }
@@ -512,7 +494,7 @@ TEST(PrometheusCollector, AddMetricDataWithExactRecordsSuccessfully)
     else
     {
       ASSERT_EQ(before_agg->get_checkpoint().size(), after_agg->get_checkpoint().size());
-      for (int i = 0; i < before_agg->get_checkpoint().size(); i++)
+      for (size_t i = 0; i < before_agg->get_checkpoint().size(); i++)
       {
         ASSERT_EQ(before_agg->get_checkpoint()[i], after_agg->get_checkpoint()[i]);
       }
@@ -771,3 +753,4 @@ TEST(PrometheusCollector, ConcurrentlyAddingAndConcurrentlyCollecting)
 }
 
 OPENTELEMETRY_END_NAMESPACE
+#endif

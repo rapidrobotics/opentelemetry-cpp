@@ -1,7 +1,11 @@
-#pragma once
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include "instrument.h"
-#include "opentelemetry/nostd/shared_ptr.h"
+#pragma once
+#ifdef ENABLE_METRICS_PREVIEW
+
+#  include "instrument.h"
+#  include "opentelemetry/nostd/shared_ptr.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace metrics
@@ -23,7 +27,7 @@ public:
 
   ObserverResult(AsynchronousInstrument<T> *instrument) : instrument_(instrument) {}
 
-  virtual void observe(T value, const trace::KeyValueIterable &labels)
+  virtual void observe(T value, const common::KeyValueIterable &labels)
   {
     instrument_->observe(value, labels);
   }
@@ -34,3 +38,4 @@ private:
 
 }  // namespace metrics
 OPENTELEMETRY_END_NAMESPACE
+#endif

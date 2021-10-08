@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
 #include "opentelemetry/sdk/trace/sampler.h"
@@ -19,13 +22,21 @@ public:
    * @return Always return Decision RECORD_AND_SAMPLE
    */
   inline SamplingResult ShouldSample(
-      const trace_api::SpanContext * /*parent_context*/,
+      const trace_api::SpanContext &parent_context,
       trace_api::TraceId /*trace_id*/,
       nostd::string_view /*name*/,
       trace_api::SpanKind /*span_kind*/,
-      const trace_api::KeyValueIterable & /*attributes*/) noexcept override
+      const opentelemetry::common::KeyValueIterable & /*attributes*/,
+      const trace_api::SpanContextKeyValueIterable & /*links*/) noexcept override
   {
-    return {Decision::RECORD_AND_SAMPLE, nullptr};
+    if (!parent_context.IsValid())
+    {
+      return {Decision::RECORD_AND_SAMPLE, nullptr, opentelemetry::trace::TraceState::GetDefault()};
+    }
+    else
+    {
+      return {Decision::RECORD_AND_SAMPLE, nullptr, parent_context.trace_state()};
+    }
   }
 
   /**

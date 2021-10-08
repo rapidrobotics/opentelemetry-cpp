@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #include "opentelemetry/context/context.h"
 
 #include <map>
@@ -18,7 +21,7 @@ TEST(ContextTest, ContextGetValueReturnsExpectedValue)
 {
   std::map<std::string, context::ContextValue> map_test = {{"test_key", (int64_t)123},
                                                            {"foo_key", (int64_t)456}};
-  context::Context test_context                         = context::Context(map_test);
+  const context::Context test_context                   = context::Context(map_test);
   EXPECT_EQ(nostd::get<int64_t>(test_context.GetValue("test_key")), 123);
   EXPECT_EQ(nostd::get<int64_t>(test_context.GetValue("foo_key")), 456);
 }
@@ -58,7 +61,7 @@ TEST(ContextTest, ContextImmutability)
   context::Context context_test = context::Context(map_test);
   context::Context context_foo  = context_test.SetValue("foo_key", (int64_t)456);
 
-  EXPECT_NE(nostd::get<int64_t>(context_test.GetValue("foo_key")), 456);
+  EXPECT_FALSE(nostd::holds_alternative<int64_t>(context_test.GetValue("foo_key")));
 }
 
 // Tests that writing the same to a context overwrites the original value.
@@ -78,14 +81,19 @@ TEST(ContextTest, ContextInheritance)
 {
   using M = std::map<std::string, context::ContextValue>;
 
-  M m1 = {{"test_key", (int64_t)123}, {"foo_key", (int64_t)456}};
-  M m2 = {{"other_key", (int64_t)789}};
+  M m1 = {{"test_key", (int64_t)123}, {"foo_key", (int64_t)321}};
+  M m2 = {{"other_key", (int64_t)789}, {"another_key", (int64_t)987}};
 
   context::Context test_context = context::Context(m1);
   context::Context foo_context  = test_context.SetValues(m2);
 
   EXPECT_EQ(nostd::get<int64_t>(foo_context.GetValue("test_key")), 123);
-  EXPECT_EQ(nostd::get<int64_t>(foo_context.GetValue("foo_key")), 456);
+  EXPECT_EQ(nostd::get<int64_t>(foo_context.GetValue("foo_key")), 321);
+  EXPECT_EQ(nostd::get<int64_t>(foo_context.GetValue("other_key")), 789);
+  EXPECT_EQ(nostd::get<int64_t>(foo_context.GetValue("another_key")), 987);
+
+  EXPECT_TRUE(nostd::holds_alternative<nostd::monostate>(test_context.GetValue("other_key")));
+  EXPECT_TRUE(nostd::holds_alternative<nostd::monostate>(test_context.GetValue("another_key")));
 }
 
 // Tests that copying a context copies the key value pairs as expected.
@@ -114,7 +122,7 @@ TEST(ContextTest, ContextEmptyMap)
 TEST(ContextTest, ContextHasKey)
 {
   std::map<std::string, context::ContextValue> map_test = {{"test_key", (int64_t)123}};
-  context::Context context_test                         = context::Context(map_test);
+  const context::Context context_test                   = context::Context(map_test);
   EXPECT_TRUE(context_test.HasKey("test_key"));
   EXPECT_FALSE(context_test.HasKey("foo_key"));
 }

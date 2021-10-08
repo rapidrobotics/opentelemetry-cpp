@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #include "opentelemetry/trace/provider.h"
 #include "opentelemetry/nostd/shared_ptr.h"
 
@@ -11,7 +14,8 @@ class TestProvider : public TracerProvider
 {
   opentelemetry::nostd::shared_ptr<Tracer> GetTracer(
       opentelemetry::nostd::string_view library_name,
-      opentelemetry::nostd::string_view library_version) override
+      opentelemetry::nostd::string_view library_version,
+      opentelemetry::nostd::string_view schema_url) override
   {
     return opentelemetry::nostd::shared_ptr<Tracer>(nullptr);
   }

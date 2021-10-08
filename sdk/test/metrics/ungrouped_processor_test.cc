@@ -1,8 +1,11 @@
-#include "opentelemetry/sdk/metrics/ungrouped_processor.h"
-#include "opentelemetry/nostd/shared_ptr.h"
-#include "opentelemetry/sdk/metrics/aggregator/counter_aggregator.h"
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include <gtest/gtest.h>
+#ifdef ENABLE_METRICS_PREVIEW
+#  include "opentelemetry/sdk/metrics/ungrouped_processor.h"
+#  include <gtest/gtest.h>
+#  include "opentelemetry/nostd/shared_ptr.h"
+#  include "opentelemetry/sdk/metrics/aggregator/counter_aggregator.h"
 
 namespace sdkmetrics  = opentelemetry::sdk::metrics;
 namespace metrics_api = opentelemetry::metrics;
@@ -181,7 +184,7 @@ TEST(UngroupedMetricsProcessor, UngroupedProcessorKeepsRecordInformationStateles
 }
 
 /**
- * The following tests are for the Stateful verison of the processor. These tests will make sure
+ * The following tests are for the Stateful version of the processor. These tests will make sure
  * that when we send the same aggreagtor twice through process(), that the values will be merged.
  * We can easily recreate this expected value by making a test aggregator that is updated through
  * both process functions but only checkpointed at the end.
@@ -620,3 +623,4 @@ TEST(UngroupedMetricsProcessor, UngroupedProcessorKeepsRecordInformationStateful
                 ->get_checkpoint(),
             test_aggregator->get_checkpoint());
 }
+#endif

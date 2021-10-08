@@ -1,11 +1,17 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #pragma once
 
-#include <cstddef>
-#include <memory>
-#include <type_traits>
-#include <utility>
+#ifdef HAVE_CPP_STDLIB
+#  include "opentelemetry/std/unique_ptr.h"
+#else
+#  include <cstddef>
+#  include <memory>
+#  include <type_traits>
+#  include <utility>
 
-#include "opentelemetry/version.h"
+#  include "opentelemetry/version.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace nostd
@@ -85,7 +91,7 @@ public:
     return *this;
   }
 
-  operator std::unique_ptr<T>() && noexcept { return std::unique_ptr<T>{release()}; }
+  operator std::unique_ptr<T>() &&noexcept { return std::unique_ptr<T>{release()}; }
 
   operator bool() const noexcept { return ptr_ != nullptr; }
 
@@ -166,3 +172,4 @@ bool operator!=(std::nullptr_t, const unique_ptr<T> &rhs) noexcept
 }
 }  // namespace nostd
 OPENTELEMETRY_END_NAMESPACE
+#endif

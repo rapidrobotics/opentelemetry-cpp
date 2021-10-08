@@ -1,14 +1,18 @@
-#pragma once
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include <map>
-#include <memory>
-#include <sstream>
-#include <stdexcept>
-#include <vector>
-#include "opentelemetry/metrics/sync_instruments.h"
-#include "opentelemetry/sdk/metrics/aggregator/counter_aggregator.h"
-#include "opentelemetry/sdk/metrics/aggregator/min_max_sum_count_aggregator.h"
-#include "opentelemetry/sdk/metrics/instrument.h"
+#pragma once
+#ifdef ENABLE_METRICS_PREVIEW
+
+#  include <map>
+#  include <memory>
+#  include <sstream>
+#  include <stdexcept>
+#  include <vector>
+#  include "opentelemetry/metrics/sync_instruments.h"
+#  include "opentelemetry/sdk/metrics/aggregator/counter_aggregator.h"
+#  include "opentelemetry/sdk/metrics/aggregator/min_max_sum_count_aggregator.h"
+#  include "opentelemetry/sdk/metrics/instrument.h"
 
 namespace metrics_api = opentelemetry::metrics;
 
@@ -17,6 +21,11 @@ namespace sdk
 {
 namespace metrics
 {
+
+#  if defined(_MSC_VER)
+#    pragma warning(push)
+#    pragma warning(disable : 4250)  // inheriting methods via dominance
+#  endif
 
 template <class T>
 class BoundCounter final : public BoundSynchronousInstrument<T>, public metrics_api::BoundCounter<T>
@@ -50,11 +59,11 @@ public:
   {
     if (value < 0)
     {
-#if __EXCEPTIONS
+#  if __EXCEPTIONS
       throw std::invalid_argument("Counter instrument updates must be non-negative.");
-#else
+#  else
       std::terminate();
-#endif
+#  endif
     }
     else
     {
@@ -90,7 +99,7 @@ public:
    */
 
   virtual nostd::shared_ptr<metrics_api::BoundCounter<T>> bindCounter(
-      const trace::KeyValueIterable &labels) override
+      const opentelemetry::common::KeyValueIterable &labels) override
   {
     this->mu_.lock();
     std::string labelset = KvToString(labels);
@@ -119,15 +128,15 @@ public:
    * @param value the numerical representation of the metric being captured
    * @param labels the set of labels, as key-value pairs
    */
-  virtual void add(T value, const trace::KeyValueIterable &labels) override
+  virtual void add(T value, const opentelemetry::common::KeyValueIterable &labels) override
   {
     if (value < 0)
     {
-#if __EXCEPTIONS
+#  if __EXCEPTIONS
       throw std::invalid_argument("Counter instrument updates must be non-negative.");
-#else
+#  else
       std::terminate();
-#endif
+#  endif
     }
     else
     {
@@ -163,7 +172,10 @@ public:
     return ret;
   }
 
-  virtual void update(T val, const trace::KeyValueIterable &labels) override { add(val, labels); }
+  virtual void update(T val, const opentelemetry::common::KeyValueIterable &labels) override
+  {
+    add(val, labels);
+  }
 
   // A collection of the bound instruments created by this unbound instrument identified by their
   // labels.
@@ -228,7 +240,7 @@ public:
    * @return a BoundIntCounter tied to the specified labels
    */
   nostd::shared_ptr<metrics_api::BoundUpDownCounter<T>> bindUpDownCounter(
-      const trace::KeyValueIterable &labels) override
+      const opentelemetry::common::KeyValueIterable &labels) override
   {
     this->mu_.lock();
     std::string labelset = KvToString(labels);
@@ -257,7 +269,7 @@ public:
    * @param value the numerical representation of the metric being captured
    * @param labels the set of labels, as key-value pairs
    */
-  void add(T value, const trace::KeyValueIterable &labels) override
+  void add(T value, const opentelemetry::common::KeyValueIterable &labels) override
   {
     auto sp = bindUpDownCounter(labels);
     sp->update(value);
@@ -290,7 +302,10 @@ public:
     return ret;
   }
 
-  virtual void update(T val, const trace::KeyValueIterable &labels) override { add(val, labels); }
+  virtual void update(T val, const opentelemetry::common::KeyValueIterable &labels) override
+  {
+    add(val, labels);
+  }
 
   std::unordered_map<std::string, nostd::shared_ptr<metrics_api::BoundUpDownCounter<T>>>
       boundInstruments_;
@@ -354,7 +369,7 @@ public:
    * @return a BoundIntCounter tied to the specified labels
    */
   nostd::shared_ptr<metrics_api::BoundValueRecorder<T>> bindValueRecorder(
-      const trace::KeyValueIterable &labels) override
+      const opentelemetry::common::KeyValueIterable &labels) override
   {
     this->mu_.lock();
     std::string labelset = KvToString(labels);
@@ -383,7 +398,7 @@ public:
    * @param value the numerical representation of the metric being captured
    * @param labels the set of labels, as key-value pairs
    */
-  void record(T value, const trace::KeyValueIterable &labels) override
+  void record(T value, const opentelemetry::common::KeyValueIterable &labels) override
   {
     auto sp = bindValueRecorder(labels);
     sp->update(value);
@@ -416,7 +431,7 @@ public:
     return ret;
   }
 
-  virtual void update(T value, const trace::KeyValueIterable &labels) override
+  virtual void update(T value, const opentelemetry::common::KeyValueIterable &labels) override
   {
     record(value, labels);
   }
@@ -425,6 +440,11 @@ public:
       boundInstruments_;
 };
 
+#  if defined(_MSC_VER)
+#    pragma warning(pop)
+#  endif
+
 }  // namespace metrics
 }  // namespace sdk
 OPENTELEMETRY_END_NAMESPACE
+#endif

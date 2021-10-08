@@ -1,7 +1,11 @@
-#pragma once
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include "instrument.h"
-#include "observer_result.h"
+#pragma once
+#ifdef ENABLE_METRICS_PREVIEW
+
+#  include "instrument.h"
+#  include "observer_result.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
 namespace metrics
@@ -28,7 +32,7 @@ public:
    * @param value is the numerical representation of the metric being captured
    * @param labels the set of labels, as key-value pairs
    */
-  virtual void observe(T value, const trace::KeyValueIterable &labels) override = 0;
+  virtual void observe(T value, const common::KeyValueIterable &labels) override = 0;
 
   /**
    * Captures data by activating the callback function associated with the
@@ -55,7 +59,7 @@ public:
               void (*callback)(ObserverResult<T>))
   {}
 
-  virtual void observe(T value, const trace::KeyValueIterable &labels) override = 0;
+  virtual void observe(T value, const common::KeyValueIterable &labels) override = 0;
 
   virtual void run() override = 0;
 };
@@ -74,10 +78,11 @@ public:
                     void (*callback)(ObserverResult<T>))
   {}
 
-  virtual void observe(T value, const trace::KeyValueIterable &labels) override = 0;
+  virtual void observe(T value, const common::KeyValueIterable &labels) override = 0;
 
   virtual void run() override = 0;
 };
 
 }  // namespace metrics
 OPENTELEMETRY_END_NAMESPACE
+#endif

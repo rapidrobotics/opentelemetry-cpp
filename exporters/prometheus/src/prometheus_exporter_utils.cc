@@ -1,27 +1,15 @@
-/*
- * Copyright The OpenTelemetry Authors
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 
-#include <iostream>
-#include <sstream>
-#include <utility>
-#include <vector>
+#ifdef ENABLE_METRICS_PREVIEW
+#  include <iostream>
+#  include <sstream>
+#  include <utility>
+#  include <vector>
 
-#include "opentelemetry/exporters/prometheus/prometheus_exporter_utils.h"
-#include "opentelemetry/sdk/metrics/aggregator/aggregator.h"
-#include "prometheus/metric_type.h"
+#  include "opentelemetry/exporters/prometheus/prometheus_exporter_utils.h"
+#  include "opentelemetry/sdk/metrics/aggregator/aggregator.h"
+#  include "prometheus/metric_type.h"
 
 namespace prometheus_client = ::prometheus;
 
@@ -284,7 +272,7 @@ void PrometheusExporterUtils::SetMetricBasic(prometheus_client::ClientMetric &me
   if (!label_pairs.empty())
   {
     metric.label.resize(label_pairs.size());
-    for (int i = 0; i < label_pairs.size(); ++i)
+    for (size_t i = 0; i < label_pairs.size(); ++i)
     {
       auto origin_name      = label_pairs[i].first;
       auto sanitized        = SanitizeNames(origin_name);
@@ -355,18 +343,15 @@ void PrometheusExporterUtils::SetValue(std::vector<T> values,
 {
   switch (type)
   {
-    case prometheus_client::MetricType::Counter:
-    {
+    case prometheus_client::MetricType::Counter: {
       metric->counter.value = values[0];
       break;
     }
-    case prometheus_client::MetricType::Gauge:
-    {
+    case prometheus_client::MetricType::Gauge: {
       metric->gauge.value = values[0];
       break;
     }
-    case prometheus_client::MetricType::Untyped:
-    {
+    case prometheus_client::MetricType::Untyped: {
       metric->untyped.value = values[0];
       break;
     }
@@ -396,7 +381,7 @@ void PrometheusExporterUtils::SetValue(std::vector<T> values,
   metric->histogram.sample_count = values[1];
   int cumulative                 = 0;
   std::vector<prometheus_client::ClientMetric::Bucket> buckets;
-  for (int i = 0; i < boundaries.size() + 1; i++)
+  for (size_t i = 0; i < boundaries.size() + 1; i++)
   {
     prometheus_client::ClientMetric::Bucket bucket;
     cumulative += counts[i];
@@ -444,7 +429,7 @@ void PrometheusExporterUtils::SetValue(std::vector<T> values,
   if (do_quantile)
   {
     std::vector<prometheus_client::ClientMetric::Quantile> prometheus_quantiles;
-    for (int i = 0; i < quantiles.size(); i++)
+    for (size_t i = 0; i < quantiles.size(); i++)
     {
       prometheus_client::ClientMetric::Quantile quantile;
       quantile.quantile = quantile_points[i];
@@ -457,3 +442,4 @@ void PrometheusExporterUtils::SetValue(std::vector<T> values,
 }  // namespace prometheus
 }  // namespace exporter
 OPENTELEMETRY_END_NAMESPACE
+#endif

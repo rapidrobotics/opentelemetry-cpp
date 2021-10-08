@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #include "opentelemetry/ext/zpages/tracez_http_server.h"
 
 OPENTELEMETRY_BEGIN_NAMESPACE
@@ -111,7 +114,7 @@ json TracezHttpServer::GetAttributesJSON(
   for (const auto &sample_attribute : sample.GetAttributes())
   {
     auto &key = sample_attribute.first;
-    auto &val = sample_attribute.second;  // SpanDataAttributeValue
+    auto &val = sample_attribute.second;  // OwnedAttributeValue
 
     /* Convert variant types to into their nonvariant form. This is done this way because
        the frontend and JSON doesn't care about type, and variant's get function only allows

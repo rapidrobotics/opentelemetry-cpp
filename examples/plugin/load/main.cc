@@ -1,4 +1,6 @@
-#include "opentelemetry/context/threadlocal_context.h"
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 #include "opentelemetry/plugin/dynamic_load.h"
 
 #include <cstring>
@@ -25,7 +27,7 @@ int main(int argc, char *argv[])
   std::ifstream config_in{argv[2]};
   if (!config_in.good())
   {
-    std::cerr << "Failed to open config file: " << std::strerror(errno) << "\n";
+    std::perror("Failed to open config file");
     return -1;
   }
   std::string config{std::istreambuf_iterator<char>{config_in}, std::istreambuf_iterator<char>{}};

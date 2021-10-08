@@ -1,19 +1,9 @@
-// Copyright 2020, OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 #pragma once
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <cstring>
@@ -96,7 +86,7 @@ struct Thread
 {
   std::thread m_thread;
 
-  volatile bool m_terminate{false};
+  std::atomic<bool> m_terminate{false};
 
   /// <summary>
   /// Thread Constructor
@@ -207,7 +197,7 @@ struct SocketAddr
     {
       inet4.sin_port = htons(atoi(colon + 1));
       char buf[16];
-      memcpy(buf, addr, std::min<ptrdiff_t>(15, colon - addr));
+      memcpy(buf, addr, (std::min<ptrdiff_t>)(15, colon - addr));
       buf[15] = '\0';
       ::inet_pton(AF_INET, buf, &inet4.sin_addr);
     }
@@ -231,8 +221,7 @@ struct SocketAddr
   {
     switch (m_data.sa_family)
     {
-      case AF_INET:
-      {
+      case AF_INET: {
         sockaddr_in const &inet4 = reinterpret_cast<sockaddr_in const &>(m_data);
         return ntohs(inet4.sin_port);
       }
@@ -248,8 +237,7 @@ struct SocketAddr
 
     switch (m_data.sa_family)
     {
-      case AF_INET:
-      {
+      case AF_INET: {
         sockaddr_in const &inet4 = reinterpret_cast<sockaddr_in const &>(m_data);
         u_long addr              = ntohl(inet4.sin_addr.s_addr);
         os << (addr >> 24) << '.' << ((addr >> 16) & 255) << '.' << ((addr >> 8) & 255) << '.'
